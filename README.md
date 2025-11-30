@@ -31,7 +31,7 @@
 
 ## 📌 주요 작업 내용
 
-### 1️⃣ FSM 기반 GameState 아키텍처 설계
+### 1️⃣ FSM 기반 플레이 모드 아키텍처 설계
 
 #### 🚨 문제 상황
 
@@ -58,9 +58,9 @@
 
 **핵심 구현 포인트**
 
-1. [**상태 중첩 방지**](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/GameState.cs#L60)
+1. [**상태 중첩 방지** - `GameState.ChangePlayMode`](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/GameState.cs#L60)
 
-2. [**자동 정리 훅**](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/PanelMode.cs#L35)
+2. [**자동 정리 훅** - `PanelMode.OnExit`](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/PanelMode.cs#L35)
 
 [📂 전체 코드 보기](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/GameState.cs#L15)
 
@@ -72,17 +72,19 @@
 |---------|--------|-------|-----|
 | 상태 충돌 버그 | 주 2-3건 발생 | **0건** | 100% 해결 |
 | 디버깅 소요 시간 | 평균 60분 | 평균 30분 | **50% 감소** |
-| 신규 모드 추가 시간 | - | 20분 이내 | IPlayMode만 구현 |
+| 신규 모드 추가 시간 | - | 20분 이내 | `IPlayMode`만 구현 |
 
 ---
 
 <details>
 <summary><b>🔍 엣지 케이스 해결 과정</b></summary>
 
+<br />
+
 **문제 ①: 일시정지 해제 시 노말 모드로만 돌아감**
 
 - **증상**: 패널 모드에서 일시정지 → 재개 시 패널이 닫혀버림
-- **원인**: 모든 모드 종료 시 기본값(NormalMode)으로 설정
+- **원인**: 모든 모드 종료 시 기본값(`NormalMode`)으로 설정
 - **해결**: `PauseMode`가 `prevMode` 저장 후 자체 `Resume()` 메서드로 복구
 <br /> [세부 코드 보기](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/PauseMode.cs#L34)
 
@@ -91,8 +93,8 @@
 - **증상**: 타임라인 재생 중 다이얼로그 모드 전환 → 시네마 중단
 - **원인**: 모든 모드 전환 요청의 우선순위를 동등하게 처리
 - **해결**: `ChangePlayMode`에서 시네마 모드 진입 시 다른 모드 요청 무시
-<br /> [세부 코드 보기 - GameState.ChangePlayMode](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/GameState.cs#L66)
-<br /> [세부 코드 보기 - CinemaMode.ExitCinemaMode](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/CinemaMode.cs#L27)
+<br /> [세부 코드 보기 - `GameState.ChangePlayMode`](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/GameState.cs#L66)
+<br /> [세부 코드 보기 - `CinemaMode.ExitCinemaMode`](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/CinemaMode.cs#L27)
 
 - 시네마 모드는 `TimelineController._timeline.stopped` 훅에서 [**자체적으로 종료**](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/TimelineController.cs#L102)
 
