@@ -1,126 +1,202 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using Cinemachine;
-using EasyButtons;
-using KinematicCharacterController.Examples;
+using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using DG.Tweening;
 
 public class PanelBase : MonoBehaviour
 {
-    [Header("BaseSettings")]
-    [SerializeField] private GraphicRaycaster _graphicRaycaster;
+    [Title("BaseSettings")] [SerializeField]
+    private GraphicRaycaster _graphicRaycaster;
+    [SerializeField] private IARaycaster _iaRaycaster;
     [SerializeField] private ScrollRect _scrollRect;
-    [SerializeField] private ScreenDirector _screenDirector;
-    [SerializeField] private StaminaBarUI _staminaBarUI;
     [SerializeField] private Image _cursorImg;
-    [SerializeField] private Image _panelCrossHair;
-    [SerializeField] private Image _crossHair;
     [SerializeField] private Canvas _curCanvas;
     [SerializeField] private CinemachineVirtualCamera _viewCam;
-    [SerializeField] private InputEventAsset _worldInput;
-    [SerializeField] protected PlayerControlSystem _playerControlSystem;
+    [SerializeField] private InputEventAsset _panelInput;
+    [SerializeField] private InputEventAsset _hoverInput;
     [SerializeField] private Transform _endPos;
     [SerializeField] private GameObject _InteractCollider;
-    [SerializeField] private float _aimSensitivity = 0.05f; //마우스 감도
-    [SerializeField] private float scrollSensitivity = 0.1f; // 휠 감도
-    [SerializeField] private Vector2 _canvasBoundaryOffset = new Vector2(1f, 1f); //패널 스크린 가장자리 Offset
+    [SerializeField] private float _aimSensitivity = 0.05f;
+    [SerializeField] private float scrollSensitivity = 0.1f;
+    [SerializeField] private Vector2 _canvasBoundaryOffset = new Vector2(1f, 1f);
+    [SerializeField] private bool _canHover = false;
 
-    [Header("BaseDebug")] [SerializeField] protected bool isOperatingPanel; //패널을 조작중인지
+    [Title("BaseDebug")] [SerializeField, ReadOnly]
+    protected bool isOperatingPanel;
+
+    [SerializeField, ReadOnly] protected bool isHovered;
 
     public bool IsOperatingPanel
     {
         get => isOperatingPanel;
         set => isOperatingPanel = value;
     }
-    [SerializeField] private bool _isBlending;
+
+    [SerializeField, ReadOnly] private bool _isBlending;
+
     private RectTransform _cursorRect;
     private RectTransform _canvasRect;
     private Vector2 _cursorScreenPos;
 
     protected Action CashedLeft;
     protected Action CashedRight;
+    private float _cachedAinSensitivity;
 
     private bool _panelLock;
-    protected bool PanelKeyLock; //패널 키 잠금 
-    
-    private GameObject _lastHoveredObject; //호버된 오브젝트
+    protected bool PanelKeyLock;
+
+    private GameObject _lastHoveredObject;
+
+    // ---- Pointer state ----
     private GameObject _pressedObject;
+    private bool _pressedSupportsDrag;
     private bool _isDragging;
-    private Vector2 _lastScreenPos;
+    private RaycastResult _lastRaycast;
+    private RaycastResult _pressRaycast;
     private Vector2 _pressScreenPos;
+    private Vector2 _lastScreenPos;
+    private float _dragThresholdSqr;
 
-    //프로퍼티 -> 접근 편의용
-    public InputEventAsset WorldInput => _worldInput;
+    private PointerEventData.InputButton _pressedButton = PointerEventData.InputButton.Left;
+    private bool _leftHeld, _rightHeld;
 
-    public event Action OperatingPanelEvent; //패널 조작시 실행되는 이벤트
-    public event Action PanelOperationCompleted; // 패널 조작 종료시 실행되는 이벤트
+    // ==== Focus Cursor internals ====
+    float _baseFov;
+    float _baseOrtho;
+    bool _isOrtho;
+    Tweener _zoomTw;
+    Tweener _cursorScaleTw;
+    Tweener _cursorColorTw;
+    bool _focusFxActive;
+
+    public InputEventAsset PanelInput => _panelInput;
+
+    public event Action OperatingPanelEvent;
+    public event Action PanelOperationCompleted;
+
+    private bool _isZoomOperating = false; //카메라 전환 후 패널 조작중인지 
 
     protected virtual void Awake()
     {
         _cursorRect = _cursorImg.GetComponent<RectTransform>();
         _canvasRect = _curCanvas.GetComponent<RectTransform>();
+        _cachedAinSensitivity = _aimSensitivity;
+
+        if (EventSystem.current != null)
+        {
+            float th = EventSystem.current.pixelDragThreshold;
+            _dragThresholdSqr = th * th;
+        }
+
+        // 커서가 클릭을 먹지 않도록(혹시 켜져 있다면)
+        if (_cursorImg) _cursorImg.raycastTarget = false;
+
+        if (_viewCam != null)
+        {
+            _isOrtho = _viewCam.m_Lens.Orthographic;
+            if (_isOrtho) _baseOrtho = _viewCam.m_Lens.OrthographicSize;
+            else _baseFov = _viewCam.m_Lens.FieldOfView;
+        }
     }
 
     protected virtual void Update()
     {
-        if (!isOperatingPanel) return;
-        HandleScrollWheel(); //스크롤 View 조작을 위한 Custom Func
-        UpdatePointerHover(); //UI 오브젝트 Hover
+        if (!isOperatingPanel)
+            return;
+
+        if (!_leftHeld && !_rightHeld && _pressedObject != null)
+        {
+            ForceReleasePointer();
+        }
+
+        HandleScrollWheel();
+        UpdatePointerHover();
     }
 
-    //x,y는 마우스 Hor,Ver
+    #region 패널 컨트롤 구현부
+
+    // ===== Cursor move =====
     private void SetRayDirection(float x, float y)
     {
         if (!isOperatingPanel || PanelKeyLock) return;
 
-        // 커서 이동량 계산
         _cursorScreenPos += new Vector2(x, y) * _aimSensitivity;
 
-        // 캔버스 절반 크기와 오프셋 적용한 제한 범위 계산
         Vector2 halfSize = _canvasRect.sizeDelta * 0.5f;
         Vector2 min = -halfSize + _canvasBoundaryOffset;
         Vector2 max = halfSize - _canvasBoundaryOffset;
 
-        // 커서 위치 클램프
         _cursorScreenPos = new Vector2(
             Mathf.Clamp(_cursorScreenPos.x, min.x, max.x),
             Mathf.Clamp(_cursorScreenPos.y, min.y, max.y)
         );
-        
+
         _cursorRect.localPosition = _cursorScreenPos;
 
-        if (_pressedObject != null)
+        if (_pressedObject != null && (_leftHeld || _rightHeld))
             PointerDragTick();
     }
 
-    /// <summary>
-    /// 커서 위치 기준으로 UI Raycast 결과를 반환하는 유틸 메서드
-    /// </summary>
+    // ===== Raycast utils =====
     private List<RaycastResult> RaycastAtCursor()
     {
         Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(_curCanvas.worldCamera, _cursorRect.position);
+        var pointerData = new PointerEventData(EventSystem.current) { position = screenPoint };
 
-        PointerEventData pointerData = new PointerEventData(EventSystem.current)
-        {
-            position = screenPoint
-        };
-
-        List<RaycastResult> results = new List<RaycastResult>();
+        List<RaycastResult> results = new();
         _graphicRaycaster.Raycast(pointerData, results);
         return results;
     }
 
-    /// <summary>
-    /// 커서 위치 오브젝트 Hover
-    /// </summary>
+    private GameObject HitTopMost()
+    {
+        var results = RaycastAtCursor();
+        if (results.Count > 0)
+        {
+            _lastRaycast = results[0];
+            return results[0].gameObject;
+        }
+
+        _lastRaycast = default;
+        return null;
+    }
+
+    private static GameObject FindHandlerTarget<T>(GameObject start) where T : IEventSystemHandler
+        => ExecuteEvents.GetEventHandler<T>(start);
+
+    private PointerEventData BuildPointerData()
+    {
+        var cam = _curCanvas.worldCamera;
+        var screenPos = RectTransformUtility.WorldToScreenPoint(cam, _cursorRect.position);
+
+        return new PointerEventData(EventSystem.current)
+        {
+            pointerId = 0,
+            button = _pressedButton, // ★ 중요: 실제 누른 버튼
+            position = screenPos,
+            pressPosition = _pressScreenPos,
+            delta = screenPos - _lastScreenPos,
+            pointerCurrentRaycast = new RaycastResult
+            {
+                gameObject = _lastRaycast.gameObject,
+                module = _lastRaycast.module,
+                worldPosition = _lastRaycast.worldPosition,
+                screenPosition = screenPos
+            },
+            pointerPressRaycast = _pressRaycast
+        };
+    }
+
+    // ===== Hover =====
     private void UpdatePointerHover()
     {
         var raycastResults = RaycastAtCursor();
-        GameObject currentHovered = raycastResults.Count > 0 ? raycastResults.FirstOrDefault().gameObject : null;
+        GameObject currentHovered = raycastResults.Count > 0 ? raycastResults[0].gameObject : null;
 
         var pointerData = new PointerEventData(EventSystem.current)
         {
@@ -130,40 +206,124 @@ public class PanelBase : MonoBehaviour
         if (_lastHoveredObject != currentHovered)
         {
             if (_lastHoveredObject != null)
-                ExecuteEvents.Execute<IPointerExitHandler>(_lastHoveredObject, pointerData, ExecuteEvents.pointerExitHandler);
+                ExecuteEvents.Execute(_lastHoveredObject, pointerData, ExecuteEvents.pointerExitHandler);
 
             if (currentHovered != null)
-                ExecuteEvents.Execute<IPointerEnterHandler>(currentHovered, pointerData, ExecuteEvents.pointerEnterHandler);
+                ExecuteEvents.Execute(currentHovered, pointerData, ExecuteEvents.pointerEnterHandler);
 
             _lastHoveredObject = currentHovered;
         }
     }
 
-    /// <summary>
-    /// 커서 위치에 있는 버튼 클릭
-    /// </summary>
-    private void InteractButton()
+    // ===== Pointer pipeline =====
+    private void PointerDown(PointerEventData.InputButton btn)
     {
-        if (PanelKeyLock) return;
+        if (PanelKeyLock)
+            return;
 
-        var results = RaycastAtCursor();
-        foreach (var r in results)
-        {
-            if (r.gameObject.TryGetComponent(out Button _))
-            {
-                var ped = new PointerEventData(EventSystem.current)
-                {
-                    position = RectTransformUtility.WorldToScreenPoint(_curCanvas.worldCamera, _cursorRect.position)
-                };
-                ExecuteEvents.Execute(r.gameObject, ped, ExecuteEvents.pointerClickHandler);
-                break;
-            }
-        }
+        if (_pressedObject != null)
+            ForceReleasePointer();
+
+        _pressedButton = btn;
+
+        var hit = HitTopMost();
+        if (hit == null)
+            return;
+
+        _pressedObject =
+            FindHandlerTarget<IBeginDragHandler>(hit) ??
+            FindHandlerTarget<IDragHandler>(hit) ??
+            FindHandlerTarget<IPointerClickHandler>(hit) ??
+            FindHandlerTarget<IPointerDownHandler>(hit);
+        if (_pressedObject == null)
+            return;
+
+        _pressRaycast = _lastRaycast;
+
+        var cam = _curCanvas.worldCamera;
+        _pressScreenPos = RectTransformUtility.WorldToScreenPoint(cam, _cursorRect.position);
+        _lastScreenPos = _pressScreenPos;
+        _isDragging = false;
+
+        var ped = BuildPointerData();
+        ExecuteEvents.Execute(_pressedObject, ped, ExecuteEvents.initializePotentialDrag);
+        ExecuteEvents.Execute(_pressedObject, ped, ExecuteEvents.pointerDownHandler);
+
+        _pressedSupportsDrag =
+            ExecuteEvents.CanHandleEvent<IBeginDragHandler>(_pressedObject) ||
+            ExecuteEvents.CanHandleEvent<IDragHandler>(_pressedObject);
     }
 
-    /// <summary>
-    /// 커서 위치의 ScrollView를 휠로 스크롤
-    /// </summary>
+    private void PointerDragTick()
+    {
+        if (_pressedObject == null)
+            return;
+
+        HitTopMost();
+        var ped = BuildPointerData();
+
+        if (_pressedSupportsDrag)
+        {
+            // 임계치 이상 이동해야 드래그 시작
+            float distSqr = (ped.position - _pressScreenPos).sqrMagnitude;
+            if (!_isDragging && distSqr >= _dragThresholdSqr)
+            {
+                var beginTarget = FindHandlerTarget<IBeginDragHandler>(_pressedObject);
+                if (beginTarget != null)
+                    ExecuteEvents.Execute(beginTarget, ped, ExecuteEvents.beginDragHandler);
+
+                _isDragging = true;
+            }
+
+            if (_isDragging)
+            {
+                var dragTarget = FindHandlerTarget<IDragHandler>(_pressedObject);
+                if (dragTarget != null)
+                    ExecuteEvents.Execute(dragTarget, ped, ExecuteEvents.dragHandler);
+            }
+        }
+
+        _lastScreenPos = ped.position;
+    }
+
+    private void PointerUp(PointerEventData.InputButton btn)
+    {
+        if (_pressedObject == null || btn != _pressedButton)
+            return;
+
+        HitTopMost(); // 최신 ray 정보를 써서 ped 갱신
+        var ped = BuildPointerData();
+
+        var upTarget = FindHandlerTarget<IPointerUpHandler>(_pressedObject) ?? _pressedObject;
+        ExecuteEvents.Execute(upTarget, ped, ExecuteEvents.pointerUpHandler);
+
+        if (_isDragging && _pressedSupportsDrag)
+        {
+            var endTarget = FindHandlerTarget<IEndDragHandler>(_pressedObject);
+            if (endTarget != null)
+                ExecuteEvents.Execute(endTarget, ped, ExecuteEvents.endDragHandler);
+        }
+        else
+        {
+            var releaseHit = HitTopMost();
+            var upClickTarget = releaseHit ? FindHandlerTarget<IPointerClickHandler>(releaseHit) : null;
+            var downClickTarget = FindHandlerTarget<IPointerClickHandler>(_pressedObject);
+
+            if (upClickTarget != null && downClickTarget == upClickTarget)
+                ExecuteEvents.Execute(downClickTarget, ped, ExecuteEvents.pointerClickHandler);
+        }
+
+        ForceReleasePointer();
+    }
+
+    private void ForceReleasePointer()
+    {
+        _pressedObject = null;
+        _pressedSupportsDrag = false;
+        _isDragging = false;
+    }
+
+    // ===== Scroll =====
     private void HandleScrollWheel()
     {
         if (_scrollRect == null) return;
@@ -172,9 +332,10 @@ public class PanelBase : MonoBehaviour
         if (Mathf.Approximately(scrollDelta, 0f)) return;
 
         var results = RaycastAtCursor();
-        foreach (var r in results)
+        foreach (RaycastResult result in results)
         {
-            if (r.gameObject == _scrollRect.gameObject || r.gameObject.transform.IsChildOf(_scrollRect.transform))
+            if (result.gameObject == _scrollRect.gameObject ||
+                result.gameObject.transform.IsChildOf(_scrollRect.transform))
             {
                 float newValue = _scrollRect.verticalNormalizedPosition + scrollDelta * scrollSensitivity;
                 _scrollRect.verticalNormalizedPosition = Mathf.Clamp01(newValue);
@@ -183,54 +344,221 @@ public class PanelBase : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 패널 조작 시작
-    /// </summary>
+    // ==== Shift ====
+    readonly float _zoomFactor = 0.98f;
+    readonly float _zoomDuration = 0.15f;
+    readonly float _cursorScale = 1.3f;
+    readonly Color _cursorTint = new(1.3f, 1.3f, 1.3f, 1f);
+
+    private void StartFocusCursor()
+    {
+        if (PanelKeyLock || _focusFxActive) return;
+        _focusFxActive = true;
+
+        // 조준 감도 하향
+        _aimSensitivity *= 0.5f;
+
+        // 카메라 줌 인 (FOV↓ or OrthoSize↓)
+        if (_viewCam != null)
+        {
+            _zoomTw?.Kill();
+            if (_isOrtho)
+            {
+                float target = Mathf.Max(0.001f, _baseOrtho * _zoomFactor);
+                _zoomTw = DOTween.To(
+                    () => _viewCam.m_Lens.OrthographicSize,
+                    v =>
+                    {
+                        var lens = _viewCam.m_Lens;
+                        lens.OrthographicSize = v;
+                        _viewCam.m_Lens = lens;
+                    },
+                    target, _zoomDuration
+                ).SetEase(Ease.OutCubic);
+            }
+            else
+            {
+                float target = Mathf.Clamp(_baseFov * _zoomFactor, 1f, 179f);
+                _zoomTw = DOTween.To(
+                    () => _viewCam.m_Lens.FieldOfView,
+                    v =>
+                    {
+                        var lens = _viewCam.m_Lens;
+                        lens.FieldOfView = v;
+                        _viewCam.m_Lens = lens;
+                    },
+                    target, _zoomDuration
+                ).SetEase(Ease.OutCubic);
+            }
+        }
+
+        // 커서 시각 피드백(살짝 크게, 살짝 밝게)
+        if (_cursorRect != null && _cursorImg != null)
+        {
+            _cursorScaleTw?.Kill();
+            _cursorColorTw?.Kill();
+
+            _cursorScaleTw = _cursorRect.DOScale(_cursorScale, _zoomDuration).SetEase(Ease.OutSine);
+            Color from = _cursorImg.color;
+            Color to = new Color(from.r * _cursorTint.r, from.g * _cursorTint.g, from.b * _cursorTint.b, from.a);
+            _cursorColorTw = _cursorImg.DOColor(to, _zoomDuration).SetEase(Ease.OutSine);
+        }
+    }
+
+    private void EndFocusCursor()
+    {
+        if (!_focusFxActive)
+            return;
+        _focusFxActive = false;
+
+        // 조준 감도 원복
+        _aimSensitivity = _cachedAinSensitivity;
+
+        // 카메라 줌 원복
+        if (_viewCam != null)
+        {
+            _zoomTw?.Kill();
+            if (_isOrtho)
+            {
+                _zoomTw = DOTween.To(
+                    () => _viewCam.m_Lens.OrthographicSize,
+                    v =>
+                    {
+                        var lens = _viewCam.m_Lens;
+                        lens.OrthographicSize = v;
+                        _viewCam.m_Lens = lens;
+                    },
+                    _baseOrtho, _zoomDuration
+                ).SetEase(Ease.OutCubic);
+            }
+            else
+            {
+                _zoomTw = DOTween.To(
+                    () => _viewCam.m_Lens.FieldOfView,
+                    v =>
+                    {
+                        var lens = _viewCam.m_Lens;
+                        lens.FieldOfView = v;
+                        _viewCam.m_Lens = lens;
+                    },
+                    _baseFov, _zoomDuration
+                ).SetEase(Ease.OutCubic);
+            }
+        }
+
+        // 커서 시각 원복
+        if (_cursorRect != null && _cursorImg != null)
+        {
+            _cursorScaleTw?.Kill();
+            _cursorColorTw?.Kill();
+
+            _cursorScaleTw = _cursorRect.DOScale(1f, _zoomDuration).SetEase(Ease.OutSine);
+            Color target = _cursorImg.color;
+            target.r = 1f;
+            target.g = 1f;
+            target.b = 1f;
+            _cursorColorTw = _cursorImg.DOColor(target, _zoomDuration).SetEase(Ease.OutSine);
+        }
+    }
+
+    private void _LeftDownCache()
+    {
+        _leftHeld = true;
+        PointerDown(PointerEventData.InputButton.Left);
+    }
+
+    private void _LeftUpCache()
+    {
+        _leftHeld = false;
+        PointerUp(PointerEventData.InputButton.Left);
+    }
+
+    private void _RightDownCache()
+    {
+        _rightHeld = true;
+        PointerDown(PointerEventData.InputButton.Right);
+    }
+
+    private void _RightUpCache()
+    {
+        _rightHeld = false;
+        PointerUp(PointerEventData.InputButton.Right);
+    }
+
+    #endregion
+
+    private void EnterPanelCore()
+    {
+        ConsoleLogger.Log("패널캠 전환완료");
+
+        GameState.Instance.PanelMode.Controller = this;
+        GameState.Instance.ChangePlayMode(GameState.Instance.PanelMode);
+        GameState.Instance.CanPause = false;
+
+        _InteractCollider.gameObject.SetActive(false);
+
+        _cursorImg.gameObject.SetActive(true);
+        GameState.Instance.PanelMode.OnEnterPanelRoutineComplete(_endPos);
+
+        OperatingPanelEvent?.Invoke();
+
+        _cursorScreenPos = Vector3.zero;
+        _cursorRect.localPosition = _cursorScreenPos;
+
+        _panelInput.OnClickLeftDown += _LeftDownCache;
+        _panelInput.OnClickLeftUp += _LeftUpCache;
+
+        _panelInput.OnClickRightDown += _RightDownCache;
+        _panelInput.OnClickRightUp += _RightUpCache;
+
+        _panelInput.OnMouseAxis += SetRayDirection;
+
+        _panelInput.OnESCKeyDown += EndPanelControl;
+        _panelInput.OnLeftKeyDown += CashedLeft;
+        _panelInput.OnRightKeyDown += CashedRight;
+
+        _panelInput.OnLShiftKeyDown += StartFocusCursor;
+        _panelInput.OnLShiftKeyUp += EndFocusCursor;
+
+        isOperatingPanel = true;
+        _isZoomOperating = true;
+    }
+
+    private void ExitPanelCore()
+    {
+        if (_focusFxActive) EndFocusCursor();
+
+        GameState.Instance.ChangePlayMode(GameState.Instance.NormalMode);
+        _cursorImg.gameObject.SetActive(false);
+
+        _panelInput.OnClickLeftDown -= _LeftDownCache;
+        _panelInput.OnClickLeftUp -= _LeftUpCache;
+
+        _panelInput.OnClickRightDown -= _RightDownCache;
+        _panelInput.OnClickRightUp -= _RightUpCache;
+
+        _panelInput.OnMouseAxis -= SetRayDirection;
+
+        _panelInput.OnESCKeyDown -= EndPanelControl;
+        _panelInput.OnLeftKeyDown -= CashedLeft;
+        _panelInput.OnRightKeyDown -= CashedRight;
+
+        _panelInput.OnLShiftKeyDown -= StartFocusCursor;
+        _panelInput.OnLShiftKeyUp -= EndFocusCursor;
+
+        PanelOperationCompleted?.Invoke();
+    }
+
+    // ===== Panel control =====
     public void StartPanelControl()
     {
-        if (_panelLock || _isBlending) return;
-        
-        // TODO: 나중에 제거
-        if (Chapter01Manager.Instance != null && Chapter01Manager.Instance.EquipBattery) return;
-        
+        if (_panelLock || _isBlending || _isZoomOperating) return;
+
+        if (_hoverInput != null)
+            EndHoverControl();
+
         _viewCam.Priority = 100;
-        _playerControlSystem.FreezePlayerControl();
-        _InteractCollider.gameObject.SetActive(false);
-        _screenDirector.FadeOutIcons();
-        _staminaBarUI.CanRun = false;
-
-        //카메라 전환 완료 후, 조작가능
-        SwitchToVCam(() =>
-        {
-            _cursorImg.gameObject.SetActive(true);
-            _crossHair.gameObject.SetActive(false);
-            if (_panelCrossHair != null)
-                _panelCrossHair.gameObject.SetActive(false);
-
-            OperatingPanelEvent?.Invoke();
-
-            // 커서 원점
-            _cursorScreenPos = Vector3.zero;
-            _cursorRect.localPosition = _cursorScreenPos;
-
-            // 입력 바인딩: 드래그 시퀀스 합성
-            _worldInput.OnClickLeftDown += PointerDown;
-            _worldInput.OnClickLeftUp   += PointerUp;
-            _worldInput.OnMouseAxis     += SetRayDirection;
-            _worldInput.OnLeftKeyDown   += CashedLeft;
-            _worldInput.OnRightKeyDown  += CashedRight;
-            _worldInput.OnESCKeyDown    += EndPanelControl;
-            
-// #if UNITY_EDITOR
-//             _worldInput.OnQKeyDown += EndPanelControl;
-// #endif
-
-            _playerControlSystem.SetPlayerPosition(_endPos);
-            _playerControlSystem.SetPlayerCameraRotation(_endPos.rotation);
-            _playerControlSystem.LockCameraMouseInput();
-
-            isOperatingPanel = true;
-        });
+        SwitchToVCam(() => { EnterPanelCore(); });
     }
 
     private void SwitchToVCam(Action onComplete = null)
@@ -240,136 +568,178 @@ public class PanelBase : MonoBehaviour
     {
         _isBlending = true;
         var brain = Camera.main.GetComponent<CinemachineBrain>();
-
-        // 블렌딩이 시작될 때까지 대기
         yield return new WaitUntil(() => brain.IsBlending);
-
-        // 블렌딩이 끝날 때까지 대기
         yield return new WaitUntil(() => !brain.IsBlending);
-
         _isBlending = false;
         onComplete?.Invoke();
     }
 
-
-    /// <summary>
-    /// 패널 조작 종료
-    /// </summary>
     public void EndPanelControl()
     {
-        if (!isOperatingPanel || _isBlending || PanelKeyLock) return;
+        if (!isOperatingPanel || _isBlending || PanelKeyLock)
+            return;
+
+        ExitPanelCore();
 
         _viewCam.Priority = 0;
-        _screenDirector.FadeInIcons();
-        _staminaBarUI.CanRun = true;
-        _cursorImg.gameObject.SetActive(false);
-        _crossHair.gameObject.SetActive(true);
-
-        _worldInput.OnClickLeftDown -= PointerDown;
-        _worldInput.OnClickLeftUp   -= PointerUp;
-        _worldInput.OnMouseAxis     -= SetRayDirection;
-        _worldInput.OnLeftKeyDown   -= CashedLeft;
-        _worldInput.OnRightKeyDown  -= CashedRight;
-        _worldInput.OnESCKeyDown    -= EndPanelControl;
-
-        PanelOperationCompleted?.Invoke();
-
-// #if UNITY_EDITOR
-//         _worldInput.OnQKeyDown -= EndPanelControl;
-// #endif
 
         StartCoroutine(WaitForBlendEnd(() =>
         {
-            _playerControlSystem.UnFreezePlayerControl();
+            GameState.Instance.PanelMode.OnExitPanelRoutineComplete();
+            GameState.Instance.CanPause = true;
             _InteractCollider.gameObject.SetActive(true);
             isOperatingPanel = false;
+            _isZoomOperating = false;
+
+            //만약 Hover가 가능한 상태면, 재진입
+            if (_canHover && isHovered)
+                StartHoverControl();
         }));
     }
 
-    /// <summary>
-    /// Pointer 합성(Down/Drag/Up)
-    /// </summary>
-    private PointerEventData BuildPointerData()
+    public void EndPanelForcely()
     {
-        var cam = _curCanvas.worldCamera;
-        var screenPos = RectTransformUtility.WorldToScreenPoint(cam, _cursorRect.position);
-        var ped = new PointerEventData(EventSystem.current)
-        {
-            pointerId = 0,
-            button = PointerEventData.InputButton.Left,
-            position = screenPos,
-            pressPosition = _pressScreenPos,
-            delta = screenPos - _lastScreenPos
-        };
-        return ped;
+        if (!isOperatingPanel || _isBlending || PanelKeyLock)
+            return;
+
+        if (_focusFxActive) EndFocusCursor();
+
+        _viewCam.Priority = 0;
+        _cursorImg.gameObject.SetActive(false);
+
+        _panelInput.OnClickLeftDown -= _LeftDownCache;
+        _panelInput.OnClickLeftUp -= _LeftUpCache;
+
+        _panelInput.OnClickRightDown -= _RightDownCache;
+        _panelInput.OnClickRightUp -= _RightUpCache;
+
+        _panelInput.OnMouseAxis -= SetRayDirection;
+
+        _panelInput.OnESCKeyDown -= EndPanelControl;
+        _panelInput.OnLeftKeyDown -= CashedLeft;
+        _panelInput.OnRightKeyDown -= CashedRight;
+
+        _panelInput.OnLShiftKeyDown -= StartFocusCursor;
+        _panelInput.OnLShiftKeyUp -= EndFocusCursor;
+
+        PanelOperationCompleted?.Invoke();
+
+        GameState.Instance.PanelMode.OnExitPanelRoutineComplete();
+        GameState.Instance.CanPause = true;
+        _InteractCollider.gameObject.SetActive(true);
+        isOperatingPanel = false;
     }
 
-    private void PointerDown()
+    public virtual void ChangeNextPage()
     {
-        if (PanelKeyLock) return;
-
-        var results = RaycastAtCursor();
-        if (results.Count == 0) return;
-
-        _pressedObject = results.FirstOrDefault().gameObject; // 첫 번째 히트 대상 고정
-
-        var cam = _curCanvas.worldCamera;
-        _pressScreenPos = RectTransformUtility.WorldToScreenPoint(cam, _cursorRect.position);
-        _lastScreenPos  = _pressScreenPos;
-
-        var ped = BuildPointerData();
-        ExecuteEvents.Execute(_pressedObject, ped, ExecuteEvents.pointerDownHandler);
     }
 
-    private void PointerDragTick()
+    public virtual void ChangePastPage()
     {
-        if (_pressedObject == null) return;
+    }
 
-        var ped = BuildPointerData();
+    [EasyButtons.Button]
+    public void PanelLock() => _panelLock = true;
 
-        if (!_isDragging)
+    [EasyButtons.Button]
+    public void PanelUnLock() => _panelLock = false;
+
+    public virtual void SetPanelKeyLock() => PanelKeyLock = true;
+    public virtual void ReleasePanelKeyLock() => PanelKeyLock = false;
+
+    public void RemoveESCKey() => _panelInput.OnESCKeyDown -= EndPanelControl;
+    public void AddESCKey() => _panelInput.OnESCKeyDown += EndPanelControl;
+
+    #region HoverControl
+
+    public void HoverEnter() => isHovered = true;
+    public void HoverExit() => isHovered = false;
+
+    public void StartHoverControl()
+    {
+        if (_isZoomOperating || !_canHover) return;
+
+        ScreenDirector.Instance.HideCrosshair();
+
+        _cursorImg.gameObject.SetActive(true);
+        _cursorRect.localPosition = _cursorScreenPos;
+
+        if (_iaRaycaster != null)
         {
-            ExecuteEvents.Execute(_pressedObject, ped, ExecuteEvents.beginDragHandler);
-            _isDragging = true;
+            _iaRaycaster.onRaycasted += SyncCursorToRayHit;
         }
 
-        ExecuteEvents.Execute(_pressedObject, ped, ExecuteEvents.dragHandler);
-        _lastScreenPos = ped.position;
+        _hoverInput.OnClickLeftDown += _LeftDownCache;
+        _hoverInput.OnClickLeftUp += _LeftUpCache;
+
+        _hoverInput.OnClickRightDown += _RightDownCache;
+        _hoverInput.OnClickRightUp += _RightUpCache;
+
+        _hoverInput.OnLeftKeyDown += CashedLeft;
+        _hoverInput.OnRightKeyDown += CashedRight;
+
+        isOperatingPanel = true;
     }
 
-    private void PointerUp()
+
+    public void EndHoverControl()
     {
-        if (_pressedObject == null) return;
+        if (_isZoomOperating || !_canHover) return;
 
-        var ped = BuildPointerData();
-
-        ExecuteEvents.Execute(_pressedObject, ped, ExecuteEvents.pointerUpHandler);
-
-        if (_isDragging)
+        if (_iaRaycaster != null)
         {
-            ExecuteEvents.Execute(_pressedObject, ped, ExecuteEvents.endDragHandler);
-        }
-        else
-        {
-            // 드래그가 아니면 클릭으로 간주
-            ExecuteEvents.Execute(_pressedObject, ped, ExecuteEvents.pointerClickHandler);
+            _iaRaycaster.onRaycasted -= SyncCursorToRayHit;
         }
 
-        _pressedObject = null;
-        _isDragging = false;
+        ScreenDirector.Instance?.ShowCrosshair();
+
+        _cursorImg.gameObject.SetActive(false);
+
+        _hoverInput.OnClickLeftDown -= _LeftDownCache;
+        _hoverInput.OnClickLeftUp -= _LeftUpCache;
+
+        _hoverInput.OnClickRightDown -= _RightDownCache;
+        _hoverInput.OnClickRightUp -= _RightUpCache;
+
+        _hoverInput.OnMouseAxis -= SetRayDirection;
+
+        _hoverInput.OnLeftKeyDown -= CashedLeft;
+        _hoverInput.OnRightKeyDown -= CashedRight;
+
+        isOperatingPanel = false;
     }
 
-    // ====== Page switching hooks ======
-    public virtual void ChangeNextPage() { }
-    public virtual void ChangePastPage() { }
 
-    // ====== Panel lock controls ======
-    [Button] public void PanelLock()   => _panelLock = true;
-    [Button] public void PanelUnLock() => _panelLock = false;
-    
-    public virtual void SetPanelKeyLock()      => PanelKeyLock = true;
-    public virtual void ReleasePanelKeyLock()  => PanelKeyLock = false;
+    private void SyncCursorToRayHit()
+    {
+        if (_iaRaycaster == null) return;
+        if (!_iaRaycaster.hitted) return;
 
-    public void RemoveESCKey() => _worldInput.OnESCKeyDown -= EndPanelControl;
-    public void AddESCKey()    => _worldInput.OnESCKeyDown += EndPanelControl;
+        Vector3 worldHitPos = _iaRaycaster.hit.point;
+
+
+        Vector2 screenPos = Camera.main.WorldToScreenPoint(worldHitPos);
+
+        Vector2 localPoint;
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            _canvasRect,
+            screenPos,
+            _curCanvas.worldCamera,
+            out localPoint
+        );
+
+        Vector2 halfSize = _canvasRect.sizeDelta * 0.5f;
+        Vector2 min = -halfSize + _canvasBoundaryOffset;
+        Vector2 max = halfSize - _canvasBoundaryOffset;
+
+        localPoint = new Vector2(
+            Mathf.Clamp(localPoint.x, min.x, max.x),
+            Mathf.Clamp(localPoint.y, min.y, max.y)
+        );
+
+        _cursorScreenPos = localPoint;
+        _cursorRect.localPosition = _cursorScreenPos;
+    }
+
+    #endregion
 }
