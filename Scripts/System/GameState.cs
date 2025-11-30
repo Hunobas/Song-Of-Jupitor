@@ -62,8 +62,8 @@ public class GameState : Singleton<GameState>
         if (next == null || ReferenceEquals(_activeMode, next))
             return;
         
-        // 시네마 모드는 특별하게, 다른 모드의 방해를 받지 않아야 하므로 자신이 시네마 모드를 끝내기 전까지 모드 변경 무시. 
-        if (IsPlayingCinema)
+        // 시네마 모드는 특별하게, 일시정지 모드 이외 다른 모드의 방해를 받지 않아야 하므로 자신이 시네마 모드를 끝내기 전까지 모드 변경 무시. 
+        if (IsPlayingCinema && !ReferenceEquals(next, PauseMode))
             return;
         
         // 패널 모드 한번 더 체크 (디버깅 시 패널 모드 자동 종료)
