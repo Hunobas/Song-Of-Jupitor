@@ -1,3 +1,32 @@
+# 🪐 목성의 노래
+
+내러티브 1인칭 3D 퍼즐 게임
+- ▶️ [**Play Demo**](https://www.youtube.com/watch?v=UEz0kvJCfAg)
+
+<br />
+
+# 🪐 프로젝트 정보
+
+### 1. 제작기간
+
+> 2025.07.01 ~ 2025.12.08
+
+### 2. 참여 인원
+
+> |                    Name                    |  Position   |
+> | :----------------------------------------: | :---------: |
+> | 김재환 | 3D 아트 및 UI 디자이너 |
+> | 박태훈 | Unity 클라이언트 프로그래머 |
+> | 이상민 | Unity 클라이언트 프로그래머 |
+> | 정영호 | 기획 |
+> | 박채연 | 2D 아트 |
+
+### 3. 역할 분담
+
+> - 박태훈 : 게임 흐름 FSM 구축 + 사인파 퍼즐 로직 구현 + 패널 가상 커서 드래그 & 드랍 시스템 + 로컬라이징 + 셰이더 구현
+
+<br />
+
 # 작업 내용
 
 ## **1. FSM 기반 GameState 아키텍처**
@@ -56,7 +85,7 @@
     
     **⇒ 해결 방법.** 
     
-    [자세한 코드 보기 - `GameState.ChangePlayMode`](https://github.com/Hunobas/Song-Of-Jupitor/blob/d4197df8b6149e4ec91b2d8d4058053f210aa484/Scripts/System/GameState.cs#L66)
+    [자세한 코드 보기 - `GameState.ChangePlayMode`](https://github.com/Hunobas/Song-Of-Jupitor/blob/d4197df8b6149e4ec91b2d8d4058053f210aa484/Scripts/System/GameState.cs#L66) <br />
     [자세한 코드 보기 - `CinemaMode.ExitCinemaMode`](https://github.com/Hunobas/Song-Of-Jupitor/blob/d4197df8b6149e4ec91b2d8d4058053f210aa484/Scripts/System/CinemaMode.cs#L27)
     
     - `GameState.ChangePlayMode` 메서드의 흐름을 비슷하게 따라가는 `CinemaMode.ExitCinemaMode` 메서드를 따로 구현합니다.
