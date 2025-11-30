@@ -267,7 +267,7 @@ EndDragHandler
 
 ---
 
-# 3️⃣ Custom NodeGraph / UnityEvent Graph 확장
+### 3️⃣ Custom NodeGraph / UnityEvent Graph 확장
 
 #### 🚨 문제 상황
 
@@ -328,7 +328,8 @@ public enum WaitPolicy
    - Delay, Wait, UnscaledTime 옵션 자동 처리
    - 에디터 UI 자동 생성
 
-[📂 전체 코드 보기](https://github.com/Hunobas/Song-Of-Jupitor/blob/ff8e930744aef5769f6bb1d1b53c50be8dc31b3b/Scripts/EventGraph/Customs/ActionNodeBase.cs#L32)
+[📂 EventGraph 전체 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/main/Scripts/EventGraph/EventGraphProcessor.cs)  
+[📂 실전 노드 15개 모음](https://github.com/Hunobas/Song-Of-Jupitor/tree/main/Scripts/EventGraph/Customs/Nodes)
 
 ---
 
@@ -357,6 +358,19 @@ public enum WaitPolicy
 | 복잡한 연출 설정 시간 | 평균 30분 | **평균 5분** |
 | 파라미터 실수율 | 주 3-5건 | **주 0-1건** |
 | 프로그래머 도움 요청 | 주 10회 | **주 2회** |
+
+---
+
+#### 🎓 배운 점
+
+1. **노드 시스템 설계의 핵심은 "생명주기 표준화"**
+   - Init → Start → Update → Complete 흐름을 강제하면 예측 가능한 동작 보장
+
+2. **추상화 레벨을 적절히 나누면 생산성이 기하급수적 증가**
+   - `IActionNode` (최소 인터페이스) → `ActionNodeBase` (공통 로직) → 구체적 노드 (비즈니스 로직만)
+
+3. **에디터 경험(DX)이 곧 팀 생산성**
+   - Reflection + Custom Editor로 반복 작업 제거 → 기획팀이 직접 그래프 편집 가능
 
 ---
 
@@ -629,19 +643,3 @@ sealed class CutsceneImageAction : IActionNode
 </details>
 
 ---
-
-#### 🎓 배운 점
-
-1. **노드 시스템 설계의 핵심은 "생명주기 표준화"**
-   - Init → Start → Update → Complete 흐름을 강제하면 예측 가능한 동작 보장
-
-2. **추상화 레벨을 적절히 나누면 생산성이 기하급수적 증가**
-   - `IActionNode` (최소 인터페이스) → `ActionNodeBase` (공통 로직) → 구체적 노드 (비즈니스 로직만)
-
-3. **에디터 경험(DX)이 곧 팀 생산성**
-   - Reflection + Custom Editor로 반복 작업 제거 → 기획팀이 직접 그래프 편집 가능
-
----
-
-[📂 EventGraph 전체 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/main/Scripts/EventGraph/EventGraphProcessor.cs)  
-[📂 실전 노드 15개 모음](https://github.com/Hunobas/Song-Of-Jupitor/tree/main/Scripts/EventGraph/Customs/Nodes)
