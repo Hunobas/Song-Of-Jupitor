@@ -179,7 +179,22 @@ EndDragHandler
 - 마우스 왼쪽 Down → 오른쪽 Up → 이벤트 짝이 안 맞음
 - Slider Handle 클릭 → Slider 본체가 이벤트를 받아야 함
 
-3. **3단계: Unity EventSystem과 동일한 수준으로 엣지 케이스 처리 (최종)**
+3. **3단계: Unity EventSystem과 동일한 수준으로 엣지 케이스 처리**
+
+[📂 초기 버전 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L307)
+<br /> [📂 최종 버전 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L219)
+
+---
+
+#### 📊 성과
+
+1. 클릭과 드래그가 명확히 구분됨
+2. 연속 클릭 시 이전 상태가 간섭하지 않음
+3. 마우스 양쪽 버튼을 동시에 사용해도 이벤트 충돌 없음
+4. Slider 본체가 반응
+5. 예상치 못한 입력 유실에도 상태가 자동 복구됨
+
+---
 
 <details>
 <summary><b>🔧 해결 과정 1: 드래그 임계값 적용</b></summary>
@@ -189,7 +204,7 @@ EndDragHandler
 **문제**: [1픽셀만 움직여도 드래그로 인식되어 클릭이 불가능](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L330)
 
 [Unity의 기본 임계값 캐싱](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L93)
-[임계값 이상 이동해야만 드래그 시작](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L269)
+<br /> [임계값 이상 이동해야만 드래그 시작](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L269)
 
 </details>
 
@@ -212,8 +227,8 @@ EndDragHandler
 **문제**: [왼쪽 버튼으로 Down → 오른쪽 버튼으로 Up 시 잘못된 이벤트 발생](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L340)
 
 [Down 시점에 어떤 버튼인지 저장](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L227)
-[Up 시점에 다른 버튼의 Up이면 무시](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L291)
-[실제 입력 바인딩 (왼쪽/오른쪽 구분)](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L464)
+<br /> [Up 시점에 다른 버튼의 Up이면 무시](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L291)
+<br /> [실제 입력 바인딩 (왼쪽/오른쪽 구분)](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L464)
 
 </details>
 
@@ -225,6 +240,7 @@ EndDragHandler
 **문제**: [Slider의 Handle을 클릭하면 Handle이 이벤트를 받지만, 실제로는 Slider 본체가 받아야 함](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L314)
 
 [상위에서 실제 핸들러를 찾음](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L233)
+
 </details>
 
 <details>
@@ -248,19 +264,6 @@ EndDragHandler
 [Down 상태인데 마우스가 안 눌려있으면 강제 정리](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L112)
 
 </details>
-
----
-
-#### 📊 최종 성과
-
-1. 클릭과 드래그가 명확히 구분됨
-2. 연속 클릭 시 이전 상태가 간섭하지 않음
-3. 마우스 양쪽 버튼을 동시에 사용해도 이벤트 충돌 없음
-4. Slider 본체가 반응
-5. 예상치 못한 입력 유실에도 상태가 자동 복구됨
-
-[📂 초기 버전 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L307)
-[📂 최종 버전 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L219)
 
 ---
 
