@@ -44,7 +44,7 @@
 - 디버깅 시 어디서 상태가 꼬였는지 추적하는 데에 **평균 1시간 소요**
 
 ![GameState 버그 영상](https://github.com/user-attachments/assets/fa973d2f-df58-483d-ae3b-05d5104e9bc6)
-*↑ 패널 모드 진입 중 시네마 모드가 끼어들면 발생하는 문제*
+<br /> *↑ 패널 모드 진입 중 시네마 모드가 끼어들면 발생하는 문제*
 
 ---
 
@@ -84,17 +84,17 @@
 - **증상**: 패널 모드에서 일시정지 → 재개 시 패널이 닫혀버림
 - **원인**: 모든 모드 종료 시 기본값(NormalMode)으로 설정
 - **해결**: `PauseMode`가 `prevMode` 저장 후 자체 `Resume()` 메서드로 복구
-[세부 코드 보기](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/PauseMode.cs#L34)
+<br /> [세부 코드 보기](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/PauseMode.cs#L34)
 
 **문제 ②: 시네마 모드 중 패널 모드 전환 시도**
 
 - **증상**: 타임라인 재생 중 다이얼로그 모드 전환 → 시네마 중단
 - **원인**: 모든 모드 전환 요청의 우선순위를 동등하게 처리
 - **해결**: `ChangePlayMode`에서 시네마 모드 진입 시 다른 모드 요청 무시
-[세부 코드 보기 - GameState.ChangePlayMode](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/GameState.cs#L66)
-[세부 코드 보기 - CinemaMode.ExitCinemaMode](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/CinemaMode.cs#L27)
+<br /> [세부 코드 보기 - GameState.ChangePlayMode](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/GameState.cs#L66)
+<br /> [세부 코드 보기 - CinemaMode.ExitCinemaMode](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/CinemaMode.cs#L27)
 
-- 시네마 모드는 `TimelineController._timeline.stopped` 훅에서 (**자체적으로 종료**)[https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/TimelineController.cs#L102]
+- 시네마 모드는 `TimelineController._timeline.stopped` 훅에서 [**자체적으로 종료**](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/TimelineController.cs#L102)
 
 </details>
 
