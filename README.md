@@ -17,7 +17,7 @@
 
 ◆ 주요 기능
 
-<img width="698" height="244" alt="그림2" src="https://github.com/user-attachments/assets/7d2c8ab4-cdf5-4329-9b63-bb919e0a9c4c" />
+<img width="1322" height="456" alt="image" src="https://github.com/user-attachments/assets/73d29e7e-e055-409d-a52c-ab6ecd0f5ad0" />
 
 - 퍼즐 ↔ 패널 ↔ 시네마 ↔ 일시정지의 모든 상태 흐름을 중앙 `GameState`에서 관리합니다.
 - `OnEnter/OnExit` 훅을 표준화해 Panel/Camera/Input/UI 잔여 상태를 자동 정리&상태 중첩 방지합니다.
