@@ -929,3 +929,253 @@ sealed class CutsceneImageAction : IActionNode
 </details>
 
 ---
+
+# 5️⃣ 모션벡터 없는 Camera 모션블러 셰이더 구현
+
+#### 🚨 문제 상황
+
+**"씬에 BaseLayer 카메라가 2개 이상 있으면 모션 블러 무시됨"**
+
+Unity URP에서 BaseLayer 카메라가 여러 개 있는 씬에서는 모션 벡터 렌더링이 충돌하여 모션 블러가 작동하지 않았습니다.
+
+- Unity URP의 모션 블러는 **모션 벡터 텍스처**에 의존
+- BaseLayer 카메라 2개 → 모션 벡터 렌더 타겟 충돌
+- Volume Override의 Motion Blur가 **먼저 렌더링된 카메라**에만 적용
+- 두 번째 카메라는 모션 벡터 없이 렌더링 → **모션 블러 효과 사라짐**
+
+<img width="1839" height="916" alt="image" src="https://github.com/user-attachments/assets/52ed330a-0238-4c12-be0d-0bc4d6086860" />
+<br /> *↑ Main Camera와 Player Camera가 모두 Base Layer → Motion Blur Volume 무시됨*
+
+---
+
+#### 🎯 해결 방법
+
+**모션 벡터가 필요 없는 정적 방향 블러 Scriptable Render Feature 구현**
+
+```plaintext
+[Unity 기본 Motion Blur]
+모션 벡터 텍스처 필요 → BaseLayer 카메라 충돌
+
+[커스텀 Camera Blur]
+방향/중심점 기반 정적 블러 → 모션 벡터 불필요
+```
+
+**핵심 구현 포인트**
+
+1. **2가지 블러 타입 지원**
+```csharp
+public enum BlurType 
+{ 
+    Linear,  // 각도 방향으로 블러 (카메라 이동 효과)
+    Radial   // 중심점에서 방사형 블러 (속도감)
+}
+```
+
+2. **3가지 샘플링 방법**
+```csharp
+public enum BlurMethod 
+{ 
+    Gaussian,      // 가우시안 가중치 (자연스러움)
+    Fixed,         // 균일 가중치 (또렷함)
+    Proportional   // 거리 비례 가중치 (중간)
+}
+```
+
+3. **애니메이션 친화적 설계**
+   - `CameraBlurController` 컴포넌트의 필드를 직접 애니메이션 가능
+   - Timeline/Animator에서 `intensity`, `angleDeg` 등을 키프레임으로 제어
+   - Downsample/Iterations로 품질-성능 트레이드오프
+
+[📂 전체 코드 보기](https://github.com/Hunobas/Song-Of-Jupitor/blob/10a1e7beee04279e75c236bbac08075c8c4097b4/Scripts/Renders/CameraBlur/CameraBlurController.cs#L24)  
+[📂 Shader 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/main/Scripts/Renders/CameraBlur/CameraBlur.shader)  
+[📂 Render Feature](https://github.com/Hunobas/Song-Of-Jupitor/blob/10a1e7beee04279e75c236bbac08075c8c4097b4/Scripts/Renders/CameraBlur/CameraBlurFeature.cs#L6)
+
+#### 📊 성과
+
+1. 모션 벡터 텍스처 의존성 제거된 연출
+2. **각도/중심점 자유롭게 설정** 가능한 블러 방향
+3. Timeline 애니메이션 지원
+4. 카메라가 정지 상태에서도 **속도감 연출 가능**
+
+<details>
+<summary><b>🔧 구현 과정 1: Scriptable Render Feature 기반 구조</b></summary>
+
+<br />
+
+**문제**: Unity 기본 Volume Override는 모션 벡터에 의존
+
+**해결**: Custom Render Pass로 완전히 독립적인 블러 구현
+
+```csharp
+// Scriptable Renderer Feature
+public class CameraBlurFeature : ScriptableRendererFeature 
+{
+    CameraBlurPass _pass;
+
+    public override void Create() 
+    {
+        _pass = new CameraBlurPass(Params);
+        _pass.renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
+    }
+
+    public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData data) 
+    {
+        // 카메라에 CameraBlurController가 있으면 활성화
+        if (!_pass.Setup(renderer, ref data)) return;
+        renderer.EnqueuePass(_pass);
+    }
+}
+```
+
+[세부 코드 보기 - CameraBlurFeature](https://github.com/Hunobas/Song-Of-Jupitor/blob/10a1e7beee04279e75c236bbac08075c8c4097b4/Scripts/Renders/CameraBlur/CameraBlurFeature.cs#L6)
+
+</details>
+
+<details>
+<summary><b>🔧 구현 과정 2: Linear/Radial Blur 셰이더</b></summary>
+
+<br />
+
+**Linear Blur: 각도 방향으로 블러**
+
+```hlsl
+float3 BlurLinear(float2 uv) 
+{
+    // 각도를 방향 벡터로 변환
+    float2 dir = float2(cos(_AngleRad), sin(_AngleRad));
+    float2 stepUV = dir * _RadiusPx * _TexelSize.xy / max(_RadiusPx, 1.0);
+    
+    const int TAPS = 13;
+    float3 acc = 0; 
+    float wsum = 0;
+    
+    // 방향으로 13개 탭 샘플링
+    [unroll] for (int i = -(TAPS/2); i <= (TAPS/2); ++i) 
+    {
+        float k = (float)i;
+        float2 uvk = uv + stepUV * k;
+        
+        // 가우시안/균일/비례 가중치 선택
+        #if defined(METHOD_GAUSS)
+            float w = gaussianWeight(k, sigma);
+        #elif defined(METHOD_FIXED)
+            float w = 1.0;
+        #else
+            float w = abs(k) + 1.0;
+        #endif
+        
+        acc += SAMPLE_TEXTURE2D(tex, uvk).rgb * w;
+        wsum += w;
+    }
+    
+    return acc / max(wsum, 1e-4);
+}
+```
+
+**Radial Blur: 중심점에서 방사형**
+
+```hlsl
+float3 BlurRadial(float2 uv) 
+{
+    // 중심점에서 현재 픽셀로의 방향
+    float2 dir = normalize(uv - _Center);
+    float2 stepUV = dir * (_RadiusPx * _TexelSize.xy) / steps;
+    
+    // 중심에서 바깥으로 13개 탭 샘플링
+    [unroll] for (int i=0; i<TAPS; ++i) 
+    {
+        float t = ((i/(TAPS-1.0)) - 0.5) * 2.0;
+        float2 uvk = uv + stepUV * t * steps;
+        // ... 가중치 계산 및 누적
+    }
+    
+    return acc / max(wsum, 1e-4);
+}
+```
+
+[세부 코드 보기 - Shader](https://github.com/Hunobas/Song-Of-Jupitor/blob/main/Scripts/Renders/CameraBlur/CameraBlur.shader)
+
+</details>
+
+<details>
+<summary><b>🔧 구현 과정 3: 애니메이션 친화적 Controller</b></summary>
+
+<br />
+
+**문제**: Volume Override는 Timeline에서 키프레임 애니메이션 어려움
+
+**해결**: MonoBehaviour 컴포넌트로 직접 필드 노출
+
+```csharp
+public class CameraBlurController : MonoBehaviour 
+{
+    // ★ Timeline/Animator에서 직접 키프레임 설정 가능
+    [SerializeField] public bool enabledBlur = false;
+    [SerializeField, Range(0f,1f)] public float intensity = 0f;
+    [SerializeField, Min(0f)] public float clamp = 8f;
+    [SerializeField] public float angleDeg = 0f;                    // Linear 전용
+    [SerializeField] public Vector2 radialCenter01 = new(0.5f,0.5f); // Radial 전용
+    
+    [SerializeField, Range(1,4)] public int downsample = 1; // 성능 제어
+    [SerializeField, Range(1,4)] public int iterations = 1; // 품질 제어
+    
+    public BlurType type = BlurType.Linear;
+    public BlurMethod method = BlurMethod.Gaussian;
+}
+```
+
+[세부 코드 보기 - CameraBlurController](https://github.com/Hunobas/Song-Of-Jupitor/blob/10a1e7beee04279e75c236bbac08075c8c4097b4/Scripts/Renders/CameraBlur/CameraBlurController.cs#L24)
+
+</details>
+
+<details>
+<summary><b>🔧 구현 과정 4: Downsample + Iterations로 성능 최적화</b></summary>
+
+<br />
+
+**문제**: 풀 해상도에서 13-tap 샘플링 → 비용 높음
+
+**해결**: Downsample 후 블러 → 업샘플
+
+```csharp
+public bool Setup(ScriptableRenderer renderer, ref RenderingData rd) 
+{
+    var desc = rd.cameraData.cameraTargetDescriptor;
+    var ds = Mathf.Max(1, st.Downsample); // 1/2/4배 축소
+    desc.width  /= ds; 
+    desc.height /= ds;
+    
+    // 축소된 해상도에서 블러 수행
+    RenderingUtils.ReAllocateIfNeeded(ref _tmpA, desc, name: "_BlurTmpA");
+    RenderingUtils.ReAllocateIfNeeded(ref _tmpB, desc, name: "_BlurTmpB");
+}
+
+public override void Execute(ScriptableRenderContext ctx, ref RenderingData rd) 
+{
+    // 다운샘플
+    Blitter.BlitCameraTexture(cmd, src, _tmpA);
+    
+    // Iterations만큼 반복 블러 (품질 향상)
+    for (int i=0; i<_iterations; i++) {
+        Blitter.BlitCameraTexture(cmd, _tmpA, _tmpB, _mat, 0);
+        (_tmpA, _tmpB) = (_tmpB, _tmpA); // ping-pong
+    }
+    
+    // 결과를 원본 해상도로 합성
+    Blitter.BlitCameraTexture(cmd, _tmpA, src);
+}
+```
+
+[세부 코드 보기 - CameraBlurPass](https://github.com/Hunobas/Song-Of-Jupitor/blob/10a1e7beee04279e75c236bbac08075c8c4097b4/Scripts/Renders/CameraBlur/CameraBlurPass.cs#L77)
+
+**성능 트레이드오프:**
+
+| 설정 | 품질 | 성능 |
+|------|------|------|
+| Downsample 1 + Iterations 1 | 최고 | 낮음 |
+| Downsample 2 + Iterations 2 | 높음 | **중간** ← 권장 |
+| Downsample 4 + Iterations 1 | 낮음 | 최고 |
+
+</details>
+
+---
