@@ -134,10 +134,10 @@
 <img width="1914" height="1028" alt="image" src="https://github.com/user-attachments/assets/7e52a3c6-6b76-4df6-bdf0-630c3715380b" />
 <br /> *↑ Unity Profiler 결과, 1프레임에 2.15ms 소요*
 
-<br /> [📂 전체 코드 보기](https://github.com/Hunobas/Song-Of-Jupitor/blob/eb4c59e1717a806b9d3d89dc7e6dd77ab297f198/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L51)  
-<br /> [📂 초기 버전 (최적화 전)](https://github.com/Hunobas/Song-Of-Jupitor/blob/687a96614dea727599ce651bbc00cf15cac9f099/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L26)  
-<br /> [📝 UPM 플러그인 GitHub](https://github.com/Hunobas/AsciiImageUGUI-UPM)  
-<br /> [📜 개발일지 전문](https://velog.io/@po127992/목성의-노래-Unity-ASCII-렌더러-공유-및-개발일지)
+[📂 전체 코드 보기](https://github.com/Hunobas/Song-Of-Jupitor/blob/eb4c59e1717a806b9d3d89dc7e6dd77ab297f198/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L51)  
+[📂 초기 버전 (최적화 전)](https://github.com/Hunobas/Song-Of-Jupitor/blob/687a96614dea727599ce651bbc00cf15cac9f099/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L26)  
+[📝 UPM 플러그인 GitHub](https://github.com/Hunobas/AsciiImageUGUI-UPM)  
+[📜 개발일지 전문](https://velog.io/@po127992/목성의-노래-Unity-ASCII-렌더러-공유-및-개발일지)
 
 #### 📊 성과
 
@@ -455,8 +455,8 @@ EndDragHandler
 
 3. **3단계: Unity EventSystem과 동일한 수준으로 엣지 케이스 처리**
 
-<br /> [📂 초기 버전 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L307)
-<br /> [📂 최종 버전 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L219)
+[📂 초기 버전 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L307)
+[📂 최종 버전 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L219)
 
 #### 📊 성과
 
@@ -596,8 +596,8 @@ public enum WaitPolicy
    - Delay, Wait, UnscaledTime 옵션 자동 처리
    - 에디터 UI 자동 생성
 
-<br /> [📂 EventGraph 전체 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/main/Scripts/EventGraph/EventGraphProcessor.cs)  
-<br /> [📂 실전 노드 15개 모음](https://github.com/Hunobas/Song-Of-Jupitor/tree/main/Scripts/EventGraph/Customs/Nodes)
+[📂 EventGraph 전체 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/main/Scripts/EventGraph/EventGraphProcessor.cs)  
+[📂 실전 노드 15개 모음](https://github.com/Hunobas/Song-Of-Jupitor/tree/main/Scripts/EventGraph/Customs/Nodes)
 
 #### 📊 성과
 
