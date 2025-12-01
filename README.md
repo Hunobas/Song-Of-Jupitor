@@ -12,7 +12,6 @@
   - [제작기간](#1-제작기간)
   - [참여 인원](#2-참여-인원)
   - [역할 분담](#3-역할-분담)
-- [📌 주요 작업 내용](#-주요-작업-내용)
   - [1️⃣ FSM 기반 플레이 모드 아키텍처 설계](#1️⃣-fsm-기반-플레이-모드-아키텍처-설계)
   - [2️⃣ Unity용 ASCII 이미지 UGUI 렌더러 플러그인](#2️⃣-unity용-ascii-이미지-ugui-렌더러-플러그인)
   - [3️⃣ 패널 UGUI Interaction System](#3️⃣-패널-ugui-interaction-system)
@@ -49,7 +48,7 @@
 
 ## 📌 주요 작업 내용
 
-### 1️⃣ FSM 기반 플레이 모드 아키텍처 설계
+### [1️⃣ FSM 기반 플레이 모드 아키텍처 설계](#-목차)
 
 #### 🚨 문제 상황
 
@@ -116,7 +115,7 @@
 
 ---
 
-### 2️⃣ Unity용 ASCII 이미지 UGUI 렌더러 플러그인
+### [2️⃣ Unity용 ASCII 이미지 UGUI 렌더러 플러그인](#-목차)
 
 #### 🚨 문제 상황
 
@@ -371,7 +370,7 @@ string GetOrMakeColorTag(int key)
 
 ---
 
-### 3️⃣ 패널 UGUI Interaction System
+### [3️⃣ 패널 UGUI Interaction System](#-목차)
 
 #### 🚨 문제 상황
 
@@ -609,7 +608,7 @@ private static GameObject FindHandlerTarget<T>(GameObject start)
 
 ---
 
-### 4️⃣ Custom NodeGraph / UnityEvent Graph 확장
+### [4️⃣ Custom NodeGraph / UnityEvent Graph 확장](#-목차)
 
 #### 🚨 문제 상황
 
@@ -948,7 +947,7 @@ sealed class CutsceneImageAction : IActionNode
 
 ---
 
-### 5️⃣ 모션벡터 없는 Camera 모션블러 셰이더 구현
+### [5️⃣ 모션벡터 없는 Camera 모션블러 셰이더 구현](#-목차)
 
 #### 🚨 문제 상황
 
