@@ -14,9 +14,9 @@
   - [역할 분담](#3-역할-분담)
 - 📌 주요 작업 내용
   - [1️⃣ FSM 기반 플레이 모드 아키텍처 설계](#1️⃣-fsm-기반-플레이-모드-아키텍처-설계)
-  - [2️⃣ Unity용 ASCII 이미지 UGUI 렌더러 플러그인](#2️⃣-unity용-ascii-이미지-ugui-렌더러-플러그인)
-  - [3️⃣ 패널 UGUI Interaction System](#3️⃣-패널-ugui-interaction-system)
-  - [4️⃣ 유니티 이벤트그래프 확장](#4️⃣-custom-nodegraph--unityevent-graph-확장)
+  - [2️⃣ Unity용 ASCII 이미지 UGUI 렌더러 플러그인 구현](#2️⃣-unity용-ascii-이미지-ugui-렌더러-플러그인-구현)
+  - [3️⃣ 패널 드래그 앤 드랍 시스템 확장](#3️⃣-패널-드래그-앤-드랍-시스템-확장)
+  - [4️⃣ 유니티 이벤트그래프 확장](#4️⃣-유니티-이벤트그래프-확장)
   - [5️⃣ 모션벡터 없는 Camera 모션블러 셰이더 구현](#5️⃣-모션벡터-없는-camera-모션블러-셰이더-구현)
 
 <br />
@@ -116,7 +116,7 @@
 
 ---
 
-### [2️⃣ Unity용 ASCII 이미지 UGUI 렌더러 플러그인](#-목차)
+### [2️⃣ Unity용 ASCII 이미지 UGUI 렌더러 플러그인 구현](#-목차)
 
 #### 🚨 문제 상황
 
@@ -371,7 +371,7 @@ string GetOrMakeColorTag(int key)
 
 ---
 
-### [3️⃣ 패널 UGUI Interaction System](#-목차)
+### [3️⃣ 패널 드래그 앤 드랍 시스템 확장](#-목차)
 
 #### 🚨 문제 상황
 
