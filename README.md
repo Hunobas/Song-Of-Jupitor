@@ -140,24 +140,6 @@
 | 문자열 길이 | 76,800자 | ~20,000자 | **74% 감소** |
 | 아트 팀 작업 시간 | 조정당 5분 | **실시간** | - |
 
-#### 🎓 배운 점
-
-1. **GPU↔CPU 파이프라인 이해의 중요성**
-   - `ReadPixels()`는 GPU를 멈추고 기다림 → 항상 비동기 대안 고려
-   - AsyncGPUReadback으로 1프레임 지연되지만 **전체 프레임레이트는 훨씬 높아짐**
-
-2. **Unity 렌더링 파이프라인 깊이 있는 활용**
-   - RenderTexture + Custom Shader로 GPU에서 전처리
-   - Sprite Atlas UV 처리 → 범용 플러그인으로 확장 가능
-
-3. **문자열 최적화의 위력**
-   - TextMeshPro의 `SetText()`는 내부적으로 파싱 비용이 큼
-   - 러닝 컬러 태그 + 양자화로 문자열 길이 **74% 감소**
-
-4. **에디터 경험= 팀 생산성**
-   - OnValidate로 실시간 미리보기 → 아트 팀이 직접 조정
-   - UPM 패키지로 배포 → 다른 프로젝트 재사용
-
 <details>
 <summary><b>🔧 해결 과정 1: GPU 다운샘플링 + AsyncGPUReadback</b></summary>
 
@@ -465,8 +447,38 @@ EndDragHandler
 
 **문제**: [1픽셀만 움직여도 드래그로 인식되어 클릭이 불가능](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L330)
 
-[Unity의 기본 임계값 캐싱](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L93)
-<br /> [임계값 이상 이동해야만 드래그 시작](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L269)
+```csharp
+// Unity의 기본 임계값 캐싱
+protected virtual void Awake()
+{
+    if (EventSystem.current != null)
+    {
+        float th = EventSystem.current.pixelDragThreshold;
+        _dragThresholdSqr = th * th; // 제곱해서 저장 (sqrMagnitude 비교용)
+    }
+}
+```
+
+```csharp
+private void PointerDragTick()
+{
+    if (!_pressedSupportsDrag) return; // ★ 드래그 지원 여부 확인
+    
+    // ★ 임계값 이상 이동해야만 드래그 시작
+    float distSqr = (ped.position - _pressScreenPos).sqrMagnitude;
+    if (!_isDragging && distSqr >= _dragThresholdSqr)
+    {
+        ExecuteEvents.Execute(_pressedObject, ped, ExecuteEvents.beginDragHandler);
+        _isDragging = true;
+    }
+
+    if (_isDragging)
+        ExecuteEvents.Execute(_pressedObject, ped, ExecuteEvents.dragHandler);
+}
+```
+
+[세부 코드 보기 - Awake](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L93)
+<br /> [세부 코드 보기 - PointerDragTick](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L269)
 
 </details>
 
@@ -477,7 +489,26 @@ EndDragHandler
 
 **문제**: [Down 상태인데 다시 Down이 들어오면 이전 입력이 정리되지 않음](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L307)
 
-[이미 뭔가 눌려있다면 먼저 정리하고 새로 시작](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L225)
+```csharp
+private void PointerDown(PointerEventData.InputButton btn)
+{
+    // ★ 이미 뭔가 눌려있다면 먼저 정리하고 새로 시작
+    if (_pressedObject != null)
+        ForceReleasePointer();
+
+    _pressedButton = btn;
+    // ...
+}
+
+private void ForceReleasePointer()
+{
+    _pressedObject = null;
+    _pressedSupportsDrag = false;
+    _isDragging = false;
+}
+```
+
+[세부 코드 보기 - PointerDown](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L225)
 
 </details>
 
@@ -488,9 +519,36 @@ EndDragHandler
 
 **문제**: [왼쪽 버튼으로 Down → 오른쪽 버튼으로 Up 시 잘못된 이벤트 발생](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L340)
 
-[Down 시점에 어떤 버튼인지 저장](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L227)
-<br /> [Up 시점에 다른 버튼의 Up이면 무시](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L291)
-<br /> [실제 입력 바인딩 (왼쪽/오른쪽 구분)](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L464)
+```csharp
+// Down 시점에 어떤 버튼인지 저장
+private PointerEventData.InputButton _pressedButton;
+
+private void PointerDown(PointerEventData.InputButton btn)
+{
+    _pressedButton = btn; // ★ 저장
+    // ...
+}
+
+private void PointerUp(PointerEventData.InputButton btn)
+{
+    // ★ 다른 버튼의 Up이면 무시
+    if (_pressedObject == null || btn != _pressedButton)
+        return;
+    // ...
+}
+```
+
+```csharp
+// 실제 입력 바인딩 (왼쪽/오른쪽 구분)
+_panelInput.OnClickLeftDown  += () => PointerDown(InputButton.Left);
+_panelInput.OnClickLeftUp    += () => PointerUp(InputButton.Left);
+_panelInput.OnClickRightDown += () => PointerDown(InputButton.Right);
+_panelInput.OnClickRightUp   += () => PointerUp(InputButton.Right);
+```
+
+[세부 코드 보기 - PointerDown](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L227)
+<br /> [세부 코드 보기 - PointerUp](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L291)
+<br /> [세부 코드 보기 - 입력 바인딩](https://github.com/Hunobas/Song-Of-Jupitor/blob/28b16dda09ae410124e0763ff97627d8ad92b76d/Scripts/System/PanelBase.cs#L508)
 
 </details>
 
@@ -501,29 +559,30 @@ EndDragHandler
 
 **문제**: [Slider의 Handle을 클릭하면 Handle이 이벤트를 받지만, 실제로는 Slider 본체가 받아야 함](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L314)
 
-[상위에서 실제 핸들러를 찾음](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L233)
+```csharp
+// ❌ 기존: 레이캐스트 히트된 오브젝트를 그대로 사용
+_pressedObject = HitTopMost();
 
-</details>
+// ✅ 개선: 상위에서 실제 핸들러를 찾음
+private void PointerDown(PointerEventData.InputButton btn)
+{
+    var hit = HitTopMost();
+    if (hit == null) return;
 
-<details>
-<summary><b>🔧 해결 과정 5: PointerEventData 완전 재현</b></summary>
+    // ★ 우선순위대로 핸들러를 찾아 올라감
+    _pressedObject =
+        FindHandlerTarget<IBeginDragHandler>(hit) ??
+        FindHandlerTarget<IDragHandler>(hit) ??
+        FindHandlerTarget<IPointerClickHandler>(hit) ??
+        FindHandlerTarget<IPointerDownHandler>(hit);
+}
 
-<br />
+private static GameObject FindHandlerTarget<T>(GameObject start) 
+    where T : IEventSystemHandler
+    => ExecuteEvents.GetEventHandler<T>(start);
+```
 
-**문제**: [Unity EventSystem은 Down/Drag/Up 시점의 위치를 모두 기억하는데, 초기 구현은 현재 위치만 전달](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L296)
-
-[현재/Down 시점 레이캐스트 결과에 대해 Unity와 동일한 정보 제공](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L177)
-
-</details>
-
-<details>
-<summary><b>🔧 해결 과정 6: Update문에서 예외 상황 감지</b></summary>
-
-<br />
-
-**문제**: [Down 후 Update가 멈추거나, 입력이 유실되면 영원히 `_pressedObject`가 남아있음](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L68)
-
-[Down 상태인데 마우스가 안 눌려있으면 강제 정리](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L112)
+[세부 코드 보기 - PointerDown](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L233)
 
 </details>
 
@@ -595,17 +654,6 @@ public enum WaitPolicy
 
 <img width="699" height="425" alt="image" src="https://github.com/user-attachments/assets/3f5355f3-19d4-4490-a180-5c655b812547" />
 <br /> *↑ 2개 이상의 파라미터를 받을 수 있고 실행 흐름을 커스텀할 수 있는 이벤트그래프 커스텀 노드*
-
-#### 🎓 배운 점
-
-1. **노드 시스템 설계의 핵심은 "생명주기 표준화"**
-   - Init → Start → Update → Complete 흐름을 강제하면 예측 가능한 동작 보장
-
-2. **추상화 레벨을 적절히 나누면 생산성이 기하급수적 증가**
-   - `IActionNode` (최소 인터페이스) → `ActionNodeBase` (공통 로직) → 구체적 노드 (비즈니스 로직만)
-
-3. **에디터 경험(DX)이 곧 팀 생산성**
-   - Reflection + Custom Editor로 반복 작업 제거 → 기획팀이 직접 그래프 편집 가능
 
 <details>
 <summary><b>🔧 구현 과정 1: 노드 생명주기 표준화</b></summary>
