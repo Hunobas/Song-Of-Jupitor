@@ -118,9 +118,9 @@
 [초기 구현: CPU에서 모든 픽셀 읽기](https://github.com/Hunobas/Song-Of-Jupitor/blob/687a96614dea727599ce651bbc00cf15cac9f099/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L312)
 
 **🐛 문제점:**
-- 160×90 그리드 × 4×4 슈퍼샘플 = **230,400회** 픽셀 접근
-- 각 픽셀마다 `<color>` 태그 생성 → **문자열 길이 76,800자**
-- `Update()` 호출 시 **CPU 점유 27.6ms, 프레임 비중 70.4%**
+   - 160×90 그리드 × 4×4 슈퍼샘플 = **230,400회** 픽셀 접근
+   - 각 픽셀마다 `<color>` 태그 생성 → **문자열 길이 76,800자**
+   - `Update()` 호출 시 **CPU 점유 27.6ms, 프레임 비중 70.4%**
 
 <img width="1915" height="1032" alt="image" src="https://github.com/user-attachments/assets/65b0df8d-8986-4c99-9343-b4bf0f895dfb" />
 <br /> *↑ Unity Profiler 결과, 1프레임에 27.6ms 소요*
@@ -431,7 +431,7 @@ EndDragHandler
   }
 ```
 
-2. **2단계: 드래그 기능 추가 → 새로운 버그 발견**
+2. **2단계: 드래그 기능 추가**
 ```csharp
   private void PointerDragTick()
   {
@@ -448,10 +448,12 @@ EndDragHandler
       ExecuteEvents.Execute(_pressedObject, ped, ExecuteEvents.dragHandler);
   }
 ```
-- 극소량 움직여도 드래그로 인식 → 클릭이 안 됨
-- 이미 눌린 상태에서 다시 Down → 이전 입력이 정리 안 됨
-- 마우스 왼쪽 Down → 오른쪽 Up → 이벤트 짝이 안 맞음
-- Slider Handle 클릭 → Slider 본체가 이벤트를 받아야 함
+
+**🐛 문제점:**
+   - 극소량 움직여도 드래그로 인식 → 클릭이 안 됨
+   - 이미 눌린 상태에서 다시 Down → 이전 입력이 정리 안 됨
+   - 마우스 왼쪽 Down → 오른쪽 Up → 이벤트 짝이 안 맞음
+   - Slider Handle 클릭 → Slider 본체가 이벤트를 받아야 함
 
 3. **3단계: Unity EventSystem과 동일한 수준으로 엣지 케이스 처리**
 
