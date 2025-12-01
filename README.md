@@ -115,7 +115,7 @@
 - 애니메이션 프레임마다 **수작업 필요**
 - 아트 팀원: "이거 좀 더 밝게 해주세요" → 프로그래머 호출
 
-<img width="800" height="442" alt="image" src="https://github.com/user-attachments/assets/841111c6-7af0-48cc-bf3e-52ae280a77b4" />
+![image (2)](https://github.com/user-attachments/assets/389ec02c-9fdf-4cdd-aa57-0c9e79bbfa4b)
 <br /> *↑ 목표: Unity 에디터에서 실시간 미리보기 가능한 아스키 렌더러*
 
 ---
