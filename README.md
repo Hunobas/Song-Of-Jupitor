@@ -102,7 +102,296 @@
 
 ---
 
-### 2️⃣ 패널 UGUI Interaction System
+### 2️⃣ Unity용 ASCII 이미지 UGUI 렌더러 플러그인
+
+#### 🚨 문제 상황
+
+**"아트 팀이 아스키 아트를 편집할 때마다 프로그래머에게 요청"**
+
+게임 내 터미널 UI에 아스키 아트가 필요했지만, 기존 방식은 아트 팀의 작업 흐름을 막았습니다:
+
+- 포토샵에서 ASCII 변환 → 텍스트 파일 → Unity에 수동 복붙
+- 색상/밝기 조정할 때마다 **전체 과정 반복**
+- 애니메이션 프레임마다 **수작업 필요**
+- 아트 팀원: "이거 좀 더 밝게 해주세요" → 프로그래머 호출
+
+<img width="800" height="442" alt="image" src="https://github.com/user-attachments/assets/841111c6-7af0-48cc-bf3e-52ae280a77b4" />
+<br /> *↑ 목표: Unity 에디터에서 실시간 미리보기 가능한 아스키 렌더러*
+
+---
+
+#### 🎯 해결 방법 (1단계 → 2단계 → 3단계)
+
+**1단계: 기본 기능 구현 → 심각한 성능 문제 발견**
+
+[초기 구현: CPU에서 모든 픽셀 읽기](https://github.com/Hunobas/Song-Of-Jupitor/blob/687a96614dea727599ce651bbc00cf15cac9f099/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L312)
+
+**🐛 문제점:**
+- 160×90 그리드 × 4×4 슈퍼샘플 = **230,400회** 픽셀 접근
+- 각 픽셀마다 `<color>` 태그 생성 → **문자열 길이 76,800자**
+- `Update()` 호출 시 **CPU 점유 27.6ms, 프레임 비중 70.4%**
+
+<img width="1915" height="1032" alt="image" src="https://github.com/user-attachments/assets/65b0df8d-8986-4c99-9343-b4bf0f895dfb" />
+<br /> *↑ Unity Profiler 결과: 1프레임에 27.6ms 소요*
+
+[개선 1: GPU에서 먼저 다운샘플](https://github.com/Hunobas/Song-Of-Jupitor/blob/eb4c59e1717a806b9d3d89dc7e6dd77ab297f198/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L504)
+<br /> [개선 2: 비동기 Readback](https://github.com/Hunobas/Song-Of-Jupitor/blob/eb4c59e1717a806b9d3d89dc7e6dd77ab297f198/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L536)
+<br /> [개선 3: 색이 바뀌는 구간에만 태그](https://github.com/Hunobas/Song-Of-Jupitor/blob/eb4c59e1717a806b9d3d89dc7e6dd77ab297f198/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L690)
+
+<img width="1914" height="1028" alt="image" src="https://github.com/user-attachments/assets/7e52a3c6-6b76-4df6-bdf0-630c3715380b" />
+<br /> *↑ Unity Profiler 결과: 1프레임에 2.15ms 소요*
+
+[📂 전체 코드 보기](https://github.com/Hunobas/Song-Of-Jupitor/blob/eb4c59e1717a806b9d3d89dc7e6dd77ab297f198/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L51)  
+[📂 초기 버전 (최적화 전)](https://github.com/Hunobas/Song-Of-Jupitor/blob/687a96614dea727599ce651bbc00cf15cac9f099/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L26)  
+[📝 UPM 플러그인 GitHub](https://github.com/Hunobas/AsciiImageUGUI-UPM)  
+[📜 개발일지 전문](https://velog.io/@po127992/목성의-노래-Unity-ASCII-렌더러-공유-및-개발일지)
+
+---
+
+#### 📊 성과
+
+<img width="1181" height="250" alt="image" src="https://github.com/user-attachments/assets/7b108303-6448-4f9e-9d31-c916c3d97ea6" />
+
+| 개선 항목 | Before | After | 개선률 |
+|---------|--------|-------|--------|
+| CPU 시간 (1프레임) | 27.6ms | **2.15ms** | **92% 감소** |
+| 프레임 비중 | 70.4% | **3.5%** | **95% 감소** |
+| 문자열 길이 | 76,800자 | ~20,000자 | **74% 감소** |
+| 아트 팀 작업 시간 | 조정당 5분 | **실시간** | - |
+
+---
+
+#### 🎓 배운 점
+
+1. **GPU↔CPU 파이프라인 이해의 중요성**
+   - `ReadPixels()`는 GPU를 멈추고 기다림 → 항상 비동기 대안 고려
+   - AsyncGPUReadback으로 1프레임 지연되지만 **전체 프레임레이트는 훨씬 높아짐**
+
+2. **Unity 렌더링 파이프라인 깊이 있는 활용**
+   - RenderTexture + Custom Shader로 GPU에서 전처리
+   - Sprite Atlas UV 처리 → 범용 플러그인으로 확장 가능
+
+3. **문자열 최적화의 위력**
+   - TextMeshPro의 `SetText()`는 내부적으로 파싱 비용이 큼
+   - 러닝 컬러 태그 + 양자화로 문자열 길이 **74% 감소**
+
+4. **에디터 경험= 팀 생산성**
+   - OnValidate로 실시간 미리보기 → 아트 팀이 직접 조정
+   - UPM 패키지로 배포 → 다른 프로젝트 재사용
+
+---
+
+<details>
+<summary><b>🔧 해결 과정 1: GPU 다운샘플링 + AsyncGPUReadback</b></summary>
+
+<br />
+
+**문제**: [Texture2D.ReadPixels()는 GPU → CPU 전송이 끝날 때까지 메인 스레드 블록킹](https://github.com/Hunobas/Song-Of-Jupitor/blob/687a96614dea727599ce651bbc00cf15cac9f099/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L235)
+
+**해결 1: GPU 다운샘플 먼저 수행**
+
+```csharp
+// 커스텀 셰이더로 Sprite UV 영역만 잘라서 다운샘플
+Shader "Hidden/Ascii/UVBlit"
+{
+    Properties { _MainTex ("", 2D) = "white" {} }
+    SubShader
+    {
+        Pass
+        {
+            CGPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            
+            float4 _UVRect; // (x, y, width, height)
+            float _FlipY;
+            
+            float2 vert(float4 pos : POSITION) : TEXCOORD0
+            {
+                float2 uv = pos.xy * 0.5 + 0.5;
+                uv = _UVRect.xy + uv * _UVRect.zw;
+                if (_FlipY > 0.5) uv.y = 1.0 - uv.y;
+                return uv;
+            }
+            
+            fixed4 frag(float2 uv : TEXCOORD0) : SV_Target
+            {
+                return tex2D(_MainTex, uv);
+            }
+            ENDCG
+        }
+    }
+}
+```
+
+```csharp
+void DownsampleToRT()
+{
+    // 스프라이트 UV 영역만 잘라서 160×90×4 크기로 축소
+    _blitMat.SetVector(_UVRectID, new Vector4(
+        _spriteUv.x, _spriteUv.y, 
+        _spriteUv.width, _spriteUv.height
+    ));
+    Graphics.Blit(_srcTex, _downRT, _blitMat);
+}
+```
+
+[세부 코드 보기 - DownsampleToRT](https://github.com/Hunobas/Song-Of-Jupitor/blob/eb4c59e1717a806b9d3d89dc7e6dd77ab297f198/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L504)
+
+**해결 2: AsyncGPUReadback으로 비동기 전송**
+
+```csharp
+AsyncGPUReadbackRequest _pendingReq;
+NativeArray<Color32> _frame;
+bool _frameValid;
+
+void KickReadback()
+{
+    if (_downRT == null || _pendingReq.done == false)
+        return;
+    
+    // 비동기 요청 (메인 스레드 블록 안 함)
+    _pendingReq = AsyncGPUReadback.Request(_downRT, 0, OnReadbackComplete);
+}
+
+void OnReadbackComplete(AsyncGPUReadbackRequest req)
+{
+    if (req.hasError) return;
+    
+    // GPU → CPU 전송 완료 (백그라운드)
+    _frame.CopyFrom(req.GetData<Color32>());
+    _frameValid = true;
+}
+
+void Update()
+{
+    DownsampleToRT();      // GPU 작업 큐에 추가
+    KickReadback();        // 비동기 요청
+    TryConsumeReadback();  // 이전 프레임 데이터 소비
+}
+```
+
+[세부 코드 보기 - AsyncGPUReadback](https://github.com/Hunobas/Song-Of-Jupitor/blob/eb4c59e1717a806b9d3d89dc7e6dd77ab297f198/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L536)
+
+**성과**: 
+- GPU → CPU 전송이 **백그라운드로 이동**
+- 메인 스레드 블록킹 **완전 제거**
+- 1프레임 지연 발생하지만 실시간 애니메이션에서는 **눈에 띄지 않음**
+
+</details>
+
+<details>
+<summary><b>🔧 해결 과정 2: 색 구간 병합 (Running Color Tag)</b></summary>
+
+<br />
+
+**문제**: [모든 픽셀마다 `<color=#RRGGBB>문자</color>` 태그 생성 → 문자열 오버헤드 급증](https://github.com/Hunobas/Song-Of-Jupitor/blob/687a96614dea727599ce651bbc00cf15cac9f099/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L421)
+
+**해결**: 색이 바뀌는 구간에만 태그 열고/닫기
+
+```csharp
+// ❌ 기존: 픽셀마다 태그
+for (int c = 0; c < cols; c++)
+{
+    Color avg = SamplePixel(c, r);
+    _sb.Append($"<color=#{ToHex(avg)}>{ch}</color>");
+}
+// 결과: <color=#FF0000>A</color><color=#FF0000>B</color><color=#FE0000>C</color>
+```
+
+```csharp
+// ✅ 개선: 색 구간 병합
+int lastColorKey = -1;
+bool colorOpen = false;
+
+for (int c = 0; c < cols; c++)
+{
+    int key = Quantize12bit(avg);
+    
+    if (key != lastColorKey)
+    {
+        if (colorOpen) _sb.Append("</color>");
+        _sb.Append(GetOrMakeColorTag(key));
+        colorOpen = true;
+        lastColorKey = key;
+    }
+    
+    _sb.Append(ch);
+}
+// 결과: <color=#FF0000>AB</color><color=#FE0000>C</color>
+```
+
+[세부 코드 보기 - GenerateAsciiFromFrame](https://github.com/Hunobas/Song-Of-Jupitor/blob/eb4c59e1717a806b9d3d89dc7e6dd77ab297f198/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L690)
+
+**Before/After 비교:**
+
+| 케이스 | 기존 문자열 | 개선 문자열 |
+|--------|------------|-----------|
+| 동일 색 5개 | `<color>A</color><color>B</color>...` (95자) | `<color>ABCDE</color>` (28자) |
+| 3색 전환 | `<color>A</color><color>B</color><color>C</color>` (57자) | `<color>A</color><color>B</color><color>C</color>` (57자) |
+
+**실제 효과**: 
+- 일반적인 이미지는 인접 픽셀끼리 색이 비슷함
+- 평균적으로 태그 개수 **70-80% 감소**
+
+</details>
+
+<details>
+<summary><b>🔧 해결 과정 3: 12bit 색 양자화 + 캐싱</b></summary>
+
+<br />
+
+**문제**: [24bit 색상(16M가지) → 태그 문자열 생성 비용 높음](https://github.com/Hunobas/Song-Of-Jupitor/blob/687a96614dea727599ce651bbc00cf15cac9f099/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L422C21-L422C33)
+
+**해결**: 각 채널을 4bit로 양자화 → 4096가지 색만 사용
+
+```csharp
+// 12bit 양자화 (R4G4B4)
+int Quantize12bit(Color avg)
+{
+    return ((int)(avg.r * 15f) << 8) |  // R: 0-15
+           ((int)(avg.g * 15f) << 4) |  // G: 0-15
+           (int)(avg.b * 15f);          // B: 0-15
+    // 총 16 × 16 × 16 = 4096가지
+}
+
+// 캐시에서 태그 가져오기
+Dictionary<int, string> _colorTagCache = new(256);
+
+string GetOrMakeColorTag(int key)
+{
+    if (_colorTagCache.TryGetValue(key, out var tag))
+        return tag;  // ★ 캐시 히트
+    
+    // 4bit → 8bit 복원 (0-15 → 0-255)
+    byte r4 = (byte)((key >> 8) & 0xF);
+    byte r = (byte)((r4 << 4) | r4);  // 예: 15 → 255
+    
+    tag = $"<color=#{r:X2}{g:X2}{b:X2}>";
+    _colorTagCache[key] = tag;
+    return tag;
+}
+```
+
+[세부 코드 보기 - GetOrMakeColorTag](https://github.com/Hunobas/Song-Of-Jupitor/blob/eb4c59e1717a806b9d3d89dc7e6dd77ab297f198/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L720)
+
+**Before/After:**
+
+| 항목 | 24bit | 12bit |
+|------|-------|-------|
+| 가능한 색 | 16,777,216 | **4,096** |
+| 태그 생성 횟수 | 픽셀 수만큼 | **구간 수만큼** (~500회) |
+| 캐시 적중률 | 낮음 | **높음** (>90%) |
+
+**시각적 차이**: 
+- ASCII 아트는 해상도가 낮아서 12bit로도 충분
+- 육안으로 거의 구분 불가
+
+</details>
+
+---
+
+### 3️⃣ 패널 UGUI Interaction System
 
 #### 🚨 문제 상황
 
@@ -114,7 +403,7 @@
 - 드래그 중 캔버스 밖으로 벗어나면 **입력 유실**
 
 ![시그널 퍼즐](https://github.com/user-attachments/assets/a160c3f4-1c15-4820-ba24-a88395dc58cf)
-<br /> *↑ 드래그 & 드랍 기능이 필요한 시그널 퍼즐*
+<br /> *↑ 목표: 드래그 & 드랍 기능이 필요한 시그널 퍼즐*
 
 ---
 
@@ -267,7 +556,7 @@ EndDragHandler
 
 ---
 
-### 3️⃣ Custom NodeGraph / UnityEvent Graph 확장
+### 4️⃣ Custom NodeGraph / UnityEvent Graph 확장
 
 #### 🚨 문제 상황
 
