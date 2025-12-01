@@ -46,8 +46,6 @@
 ![GameState 버그 영상](https://github.com/user-attachments/assets/fa973d2f-df58-483d-ae3b-05d5104e9bc6)
 <br /> *↑ 패널 모드 진입 중 시네마 모드가 끼어들면 발생하는 문제*
 
----
-
 #### 🎯 해결 방법
 
 <img width="1020" height="458" alt="그림1" src="https://github.com/user-attachments/assets/d0b930d5-8c1a-4120-8fbd-e9b4ee1dfc44" />
@@ -63,8 +61,6 @@
 
 [📂 전체 코드 보기](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/GameState.cs#L15)
 
----
-
 #### 📊 성과
 
 | 개선 항목 | Before | After | 효과 |
@@ -72,8 +68,6 @@
 | 상태 충돌 버그 | 주 2-3건 발생 | **0건** | 100% 해결 |
 | 디버깅 소요 시간 | 평균 60분 | 평균 30분 | **50% 감소** |
 | 신규 모드 추가 시간 | - | 20분 이내 | `IPlayMode`만 구현 |
-
----
 
 <details>
 <summary><b>🔍 엣지 케이스 해결 과정</b></summary>
@@ -117,8 +111,6 @@
 ![image (2)](https://github.com/user-attachments/assets/389ec02c-9fdf-4cdd-aa57-0c9e79bbfa4b)
 <br /> *↑ 목표: Unity 에디터에서 실시간 미리보기 가능한 아스키 렌더러*
 
----
-
 #### 🎯 해결 방법 (1단계 → 2단계 → 3단계)
 
 **1단계: 기본 기능 구현 → 심각한 성능 문제 발견**
@@ -142,12 +134,10 @@
 <img width="1914" height="1028" alt="image" src="https://github.com/user-attachments/assets/7e52a3c6-6b76-4df6-bdf0-630c3715380b" />
 <br /> *↑ Unity Profiler 결과, 1프레임에 2.15ms 소요*
 
-[📂 전체 코드 보기](https://github.com/Hunobas/Song-Of-Jupitor/blob/eb4c59e1717a806b9d3d89dc7e6dd77ab297f198/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L51)  
-[📂 초기 버전 (최적화 전)](https://github.com/Hunobas/Song-Of-Jupitor/blob/687a96614dea727599ce651bbc00cf15cac9f099/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L26)  
-[📝 UPM 플러그인 GitHub](https://github.com/Hunobas/AsciiImageUGUI-UPM)  
-[📜 개발일지 전문](https://velog.io/@po127992/목성의-노래-Unity-ASCII-렌더러-공유-및-개발일지)
-
----
+<br /> [📂 전체 코드 보기](https://github.com/Hunobas/Song-Of-Jupitor/blob/eb4c59e1717a806b9d3d89dc7e6dd77ab297f198/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L51)  
+<br /> [📂 초기 버전 (최적화 전)](https://github.com/Hunobas/Song-Of-Jupitor/blob/687a96614dea727599ce651bbc00cf15cac9f099/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L26)  
+<br /> [📝 UPM 플러그인 GitHub](https://github.com/Hunobas/AsciiImageUGUI-UPM)  
+<br /> [📜 개발일지 전문](https://velog.io/@po127992/목성의-노래-Unity-ASCII-렌더러-공유-및-개발일지)
 
 #### 📊 성과
 
@@ -159,8 +149,6 @@
 | 프레임 비중 | 70.4% | **3.5%** | **95% 감소** |
 | 문자열 길이 | 76,800자 | ~20,000자 | **74% 감소** |
 | 아트 팀 작업 시간 | 조정당 5분 | **실시간** | - |
-
----
 
 #### 🎓 배운 점
 
@@ -179,8 +167,6 @@
 4. **에디터 경험= 팀 생산성**
    - OnValidate로 실시간 미리보기 → 아트 팀이 직접 조정
    - UPM 패키지로 배포 → 다른 프로젝트 재사용
-
----
 
 <details>
 <summary><b>🔧 해결 과정 1: GPU 다운샘플링 + AsyncGPUReadback</b></summary>
@@ -406,8 +392,6 @@ string GetOrMakeColorTag(int key)
 ![시그널 퍼즐](https://github.com/user-attachments/assets/a160c3f4-1c15-4820-ba24-a88395dc58cf)
 <br /> *↑ 목표: 드래그 & 드랍 기능이 필요한 시그널 퍼즐*
 
----
-
 #### 🎯 해결 방법
 
 **Unity의 EventSystem 파이프라인을 완전히 재구현**
@@ -471,10 +455,8 @@ EndDragHandler
 
 3. **3단계: Unity EventSystem과 동일한 수준으로 엣지 케이스 처리**
 
-[📂 초기 버전 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L307)
+<br /> [📂 초기 버전 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L307)
 <br /> [📂 최종 버전 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L219)
-
----
 
 #### 📊 성과
 
@@ -483,8 +465,6 @@ EndDragHandler
 3. 마우스 양쪽 버튼을 동시에 사용해도 이벤트 충돌 없음
 4. **Slider 본체**가 반응
 5. 예상치 못한 입력 유실에도 상태가 자동 복구됨
-
----
 
 <details>
 <summary><b>🔧 해결 과정 1: 드래그 임계값 적용</b></summary>
@@ -572,8 +552,6 @@ Unity 기본 `UnityEvent`는 최대 1개 파라미터만 지원하며, 기존 �
 <img width="781" height="366" alt="image" src="https://github.com/user-attachments/assets/69ea3e47-2097-444d-8cc9-b94cc31b73b1" />
 <br /> *↑ 최대 1개 파라미터 메서드만 호출할 수 있는 기존 이벤트그래프 `Invoke` 노드*
 
----
-
 #### 🎯 해결 방법
 
 **노드 생명주기 기반 커스텀 액션 시스템 구축**
@@ -618,10 +596,8 @@ public enum WaitPolicy
    - Delay, Wait, UnscaledTime 옵션 자동 처리
    - 에디터 UI 자동 생성
 
-[📂 EventGraph 전체 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/main/Scripts/EventGraph/EventGraphProcessor.cs)  
-[📂 실전 노드 15개 모음](https://github.com/Hunobas/Song-Of-Jupitor/tree/main/Scripts/EventGraph/Customs/Nodes)
-
----
+<br /> [📂 EventGraph 전체 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/main/Scripts/EventGraph/EventGraphProcessor.cs)  
+<br /> [📂 실전 노드 15개 모음](https://github.com/Hunobas/Song-Of-Jupitor/tree/main/Scripts/EventGraph/Customs/Nodes)
 
 #### 📊 성과
 
@@ -652,8 +628,6 @@ public enum WaitPolicy
 | 파라미터 실수율 | 주 3-5건 | **주 0-1건** |
 | 프로그래머 도움 요청 | 주 10회 | **주 2회** |
 
----
-
 #### 🎓 배운 점
 
 1. **노드 시스템 설계의 핵심은 "생명주기 표준화"**
@@ -664,8 +638,6 @@ public enum WaitPolicy
 
 3. **에디터 경험(DX)이 곧 팀 생산성**
    - Reflection + Custom Editor로 반복 작업 제거 → 기획팀이 직접 그래프 편집 가능
-
----
 
 <details>
 <summary><b>🔧 구현 과정 1: 노드 생명주기 표준화</b></summary>
@@ -928,6 +900,8 @@ sealed class CutsceneImageAction : IActionNode
 ```
 
 [전체 코드 보기](https://github.com/Hunobas/Song-Of-Jupitor/blob/ff8e930744aef5769f6bb1d1b53c50be8dc31b3b/Scripts/EventGraph/Customs/Nodes/Display/Node_CutsceneImage.cs#L9)
+
+---
 
 **결과**: 
 - Duration(1초) 동안 **이미지 표시**
