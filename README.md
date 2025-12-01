@@ -122,17 +122,7 @@
    - 각 픽셀마다 `<color>` 태그 생성 → **문자열 길이 76,800자**
    - `Update()` 호출 시 **CPU 점유 27.6ms, 프레임 비중 70.4%**
 
-<img width="1915" height="1032" alt="image" src="https://github.com/user-attachments/assets/65b0df8d-8986-4c99-9343-b4bf0f895dfb" />
-<br /> *↑ Unity Profiler 결과, 1프레임에 27.6ms 소요*
-
-**핵심 구현 포인트**
-
-1. [GPU에서 먼저 다운샘플](https://github.com/Hunobas/Song-Of-Jupitor/blob/eb4c59e1717a806b9d3d89dc7e6dd77ab297f198/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L504)
-2. [비동기 Readback](https://github.com/Hunobas/Song-Of-Jupitor/blob/eb4c59e1717a806b9d3d89dc7e6dd77ab297f198/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L536)
-3. [색이 바뀌는 구간에만 태그](https://github.com/Hunobas/Song-Of-Jupitor/blob/eb4c59e1717a806b9d3d89dc7e6dd77ab297f198/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L690)
-
-<img width="1914" height="1028" alt="image" src="https://github.com/user-attachments/assets/7e52a3c6-6b76-4df6-bdf0-630c3715380b" />
-<br /> *↑ Unity Profiler 결과, 1프레임에 2.15ms 소요*
+**2단계: GPU에서 먼저 다운샘플 → 비동기 Readback → 색이 바뀌는 구간에만 태그**
 
 [📂 전체 코드 보기](https://github.com/Hunobas/Song-Of-Jupitor/blob/eb4c59e1717a806b9d3d89dc7e6dd77ab297f198/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L51)  
 [📂 초기 버전 (최적화 전)](https://github.com/Hunobas/Song-Of-Jupitor/blob/687a96614dea727599ce651bbc00cf15cac9f099/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L26)  
@@ -458,7 +448,7 @@ EndDragHandler
 3. **3단계: Unity EventSystem과 동일한 수준으로 엣지 케이스 처리**
 
 [📂 초기 버전 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L307)
-[📂 최종 버전 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L219)
+<br /> [📂 최종 버전 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L219)
 
 #### 📊 성과
 
