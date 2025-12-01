@@ -430,7 +430,7 @@ EndDragHandler
    - 마우스 왼쪽 Down → 오른쪽 Up → 이벤트 짝이 안 맞음
    - Slider Handle 클릭 → Slider 본체가 이벤트를 받아야 함
 
-3. **3단계: Unity EventSystem과 동일한 수준으로 엣지 케이스 처리**
+<br /> 3. **3단계: Unity EventSystem과 동일한 수준으로 엣지 케이스 처리**
 
 [📂 초기 버전 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L307)
 <br /> [📂 최종 버전 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L219)
