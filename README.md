@@ -604,30 +604,6 @@ public enum WaitPolicy
 <img width="699" height="425" alt="image" src="https://github.com/user-attachments/assets/3f5355f3-19d4-4490-a180-5c655b812547" />
 <br /> *↑ 2개 이상의 파라미터를 받을 수 있고 실행 흐름을 커스텀할 수 있는 이벤트그래프 커스텀 노드*
 
-**1단계: 기본 구조 구축**
-
-| 구현 내용 | 효과 |
-|---------|------|
-| `EventGraphRuntime` 스택 관리 | 중첩 그래프 실행 시 안전한 컨텍스트 추적 |
-| `BakedEventGraph` 시스템 | 런타임 파라미터 오버라이드 지원 |
-| `CoroutineDelegator` | MonoBehaviour 의존성 분리 |
-
-**2단계: 실전 노드 구현 (15개)**
-
-| 카테고리 | 노드 예시 | 파라미터 수 |
-|---------|---------|-----------|
-| 카메라 | `Node_Start6DShake` | 5개 (brain, noiseProfile, amplitude, frequency, duration) |
-| 렌더링 | `Node_SliceGlitchConfigureBehavior` | 4개 (probability, interval, fullScreenIntensity, uiIntensity) |
-| UI | `Node_CutsceneImage` | 9개 (panel, sprite/animController, vignette 옵션들, duration) |
-
-**3단계: 기획팀 워크플로우 개선**
-
-| 개선 항목 | Before | After |
-|---------|--------|-------|
-| 복잡한 연출 설정 시간 | 평균 30분 | **평균 5분** |
-| 파라미터 실수율 | 주 3-5건 | **주 0-1건** |
-| 프로그래머 도움 요청 | 주 10회 | **주 2회** |
-
 #### 🎓 배운 점
 
 1. **노드 시스템 설계의 핵심은 "생명주기 표준화"**
