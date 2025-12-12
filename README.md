@@ -1010,6 +1010,9 @@ public enum BlurMethod
 
 #### 📊 성과
 
+![Jupitor-Prologue-WindowsMacLinux-Unity2022 3 62f2_DX11_2025-12-1307-55-40-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/359d2e29-2e54-4c56-a11b-4fa64f54b5e4)
+<br /> *Timeline에서 편집 가능한 정적 모션 블러*
+
 1. 모션 벡터 텍스처 의존성 제거된 연출
 2. **각도/중심점 자유롭게 설정** 가능한 블러 방향
 3. Timeline 애니메이션 지원
