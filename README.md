@@ -16,7 +16,7 @@
   - [1️⃣ FSM 기반 플레이 모드 아키텍처 설계](#1️⃣-fsm-기반-플레이-모드-아키텍처-설계)
   - [2️⃣ ASCII 이미지 UGUI 렌더러 플러그인 구현](#2️⃣-ascii-이미지-ugui-렌더러-플러그인-구현)
   - [3️⃣ 패널 드래그 앤 드랍 시스템 확장](#3️⃣-패널-드래그-앤-드랍-시스템-확장)
-  - [4️⃣ 유니티 이벤트그래프 확장](#4️⃣-유니티-이벤트그래프-확장)
+  - [4️⃣ 유니티 이벤트그래프 → 언리얼 블루프린트처럼 확장](#4️⃣-유니티-이벤트그래프-확장)
   - [5️⃣ 모션벡터 없는 카메라 모션블러 셰이더 구현](#5️⃣-모션벡터-없는-카메라-모션블러-셰이더-구현)
 
 <br />
@@ -64,15 +64,13 @@
 ![GameState 버그 영상](https://github.com/user-attachments/assets/fa973d2f-df58-483d-ae3b-05d5104e9bc6)
 <br /> *↑ 패널 모드 진입 중 시네마 모드가 끼어들면 발생하는 조작 불가 문제*
 
-#### 🎯 해결 방법
+#### 🎯 핵심 구현 포인트
 
 <img width="1020" height="458" alt="그림1" src="https://github.com/user-attachments/assets/d0b930d5-8c1a-4120-8fbd-e9b4ee1dfc44" />
 
 **중앙 집중식 FSM으로 모든 플레이 모드를 단일 책임 관리**
 
 <img width="1322" height="456" alt="image" src="https://github.com/user-attachments/assets/73d29e7e-e055-409d-a52c-ab6ecd0f5ad0" />
-
-**핵심 구현 포인트**
 
 1. [**상태 중첩 방지** - `GameState.ChangePlayMode`](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/GameState.cs#L60)
 2. [**자동 정리 훅** - `PanelMode.OnExit`](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/PanelMode.cs#L35)
@@ -88,29 +86,26 @@
 | 신규 모드 추가 시간 | - | 20분 이내 | `IPlayMode`만 구현 |
 
 <details>
-<summary><b>🔧 해결 과정 1: 일시정지 해제 시 이전 플레이 모드로 돌아감</b></summary>
+<summary><b>🔧 해결 과정 1: 일시정지 해제 시 이전 플레이 모드를 기억하지 못함</b></summary>
 
 <br />
 
-- **증상**: 패널 모드에서 일시정지 → 재개 시 패널이 닫혀버림
-- **원인**: 모든 모드 종료 시 기본값(`NormalMode`)으로 설정
-- **해결**: `PauseMode`가 `prevMode` 저장 후 자체 `Resume()` 메서드로 복구
+**`PauseMode`가 `prevMode` 저장 후 자체 `Resume()` 메서드로 복구**
 <br /> [세부 코드 보기](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/PauseMode.cs#L34)
 
 </details>
 
 <details>
-<summary><b>🔧 해결 과정 2: 시네마 모드 중 다이얼로그 모드 전환 무시</b></summary>
+<summary><b>🔧 해결 과정 2: 시네마 모드 중 다이얼로그 모드로 전환되면 시네마 중단</b></summary>
 
 <br />
 
-- **증상**: 타임라인 재생 중 다이얼로그 모드 전환 → 시네마 중단
-- **원인**: 모든 모드 전환 요청의 우선순위를 동등하게 처리
-- **해결**: `ChangePlayMode`에서 시네마 모드 진입 시 다른 모드 요청 무시
+- **`ChangePlayMode`에서 시네마 모드 진입 시 다른 모드 요청 무시**
+- 시네마 모드는 `TimelineController`에서 **자체적으로 종료**
+
 <br /> [세부 코드 보기 - `GameState.ChangePlayMode`](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/GameState.cs#L66)
 <br /> [세부 코드 보기 - `CinemaMode.ExitCinemaMode`](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/CinemaMode.cs#L27)
-
-- 시네마 모드는 `TimelineController._timeline.stopped` 훅에서 [**자체적으로 종료**](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/TimelineController.cs#L102)
+<br /> [세부 코드 보기 - `TimelineController.OnTimelineStopped`](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/TimelineController.cs#L102)
 
 </details>
 
@@ -132,18 +127,16 @@
 ![image (2)](https://github.com/user-attachments/assets/389ec02c-9fdf-4cdd-aa57-0c9e79bbfa4b)
 <br /> *↑ 목표: Unity 에디터에서 실시간 미리보기 가능한 아스키 렌더러*
 
-#### 🎯 해결 방법 (1단계 → 2단계 → 3단계)
+#### 🎯 핵심 구현 포인트
 
-**1단계: 기본 기능 구현 → 심각한 성능 문제 발견**
-
-[초기 구현: CPU에서 모든 픽셀 읽기](https://github.com/Hunobas/Song-Of-Jupitor/blob/687a96614dea727599ce651bbc00cf15cac9f099/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L312)
+[나이브했던 초기 구현: CPU에서 모든 픽셀 읽은 후 아스키 문자 변환](https://github.com/Hunobas/Song-Of-Jupitor/blob/687a96614dea727599ce651bbc00cf15cac9f099/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L312)
 
 **🐛 문제점:**
    - 160×90 그리드 × 4×4 슈퍼샘플 = **230,400회** 픽셀 접근
    - 각 픽셀마다 `<color>` 태그 생성 → **문자열 길이 76,800자**
    - `Update()` 호출 시 **CPU 점유 27.6ms, 프레임 비중 70.4%**
 
-**2단계: GPU에서 먼저 다운샘플 → 비동기 Readback → 색이 바뀌는 구간에만 태그**
+**비동기 Readback + 색이 바뀌는 구간에만 태그 + 색상 해상도 낮춤**
 
 [📂 전체 코드 보기](https://github.com/Hunobas/Song-Of-Jupitor/blob/eb4c59e1717a806b9d3d89dc7e6dd77ab297f198/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L51)  
 [📂 초기 버전 (최적화 전)](https://github.com/Hunobas/Song-Of-Jupitor/blob/687a96614dea727599ce651bbc00cf15cac9f099/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L26)  
@@ -162,13 +155,11 @@
 | 아트 팀 작업 시간 | 조정당 5분 | **실시간** | - |
 
 <details>
-<summary><b>🔧 해결 과정 1: GPU 다운샘플링 + AsyncGPUReadback</b></summary>
+<summary><b>🔧 해결 과정 1: GPU → CPU 전송이 끝날 때까지 메인 스레드 블록킹</b></summary>
 
-<br />
+<br /> [문제 코드 보기 - `ReadPixels` 이후 즉시 `Apply`](https://github.com/Hunobas/Song-Of-Jupitor/blob/687a96614dea727599ce651bbc00cf15cac9f099/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L235)
 
-**문제**: [Texture2D.ReadPixels()는 GPU → CPU 전송이 끝날 때까지 메인 스레드 블록킹](https://github.com/Hunobas/Song-Of-Jupitor/blob/687a96614dea727599ce651bbc00cf15cac9f099/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L235)
-
-**해결 1: GPU 다운샘플 먼저 수행**
+**① GPU 다운샘플 먼저 수행**
 
 ```csharp
 // 커스텀 셰이더로 Sprite UV 영역만 잘라서 다운샘플
@@ -218,7 +209,7 @@ void DownsampleToRT()
 
 [세부 코드 보기 - DownsampleToRT](https://github.com/Hunobas/Song-Of-Jupitor/blob/eb4c59e1717a806b9d3d89dc7e6dd77ab297f198/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L504)
 
-**해결 2: AsyncGPUReadback으로 비동기 전송**
+**② AsyncGPUReadback으로 비동기 전송**
 
 ```csharp
 AsyncGPUReadbackRequest _pendingReq;
@@ -253,21 +244,14 @@ void Update()
 
 [세부 코드 보기 - AsyncGPUReadback](https://github.com/Hunobas/Song-Of-Jupitor/blob/eb4c59e1717a806b9d3d89dc7e6dd77ab297f198/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L536)
 
-**성과**: 
-- GPU → CPU 전송이 **백그라운드로 이동**
-- 메인 스레드 블록킹 **완전 제거**
-- 1프레임 지연 발생하지만 실시간 애니메이션에서는 **눈에 띄지 않음**
-
 </details>
 
 <details>
-<summary><b>🔧 해결 과정 2: 색 구간 병합 (Running Color Tag)</b></summary>
+<summary><b>🔧 해결 과정 2: 모든 픽셀마다 생성되는 컬러 태그로 문자열 오버헤드 급증</b></summary>
 
-<br />
+<br /> [문제 코드 보기 - 픽셀 당 Append(`<color=#RRGGBB>문자</color>`) 수행](https://github.com/Hunobas/Song-Of-Jupitor/blob/687a96614dea727599ce651bbc00cf15cac9f099/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L421)
 
-**문제**: [모든 픽셀마다 `<color=#RRGGBB>문자</color>` 태그 생성 → 문자열 오버헤드 급증](https://github.com/Hunobas/Song-Of-Jupitor/blob/687a96614dea727599ce651bbc00cf15cac9f099/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L421)
-
-**해결**: 색이 바뀌는 구간에만 태그 열고/닫기
+**색이 바뀌는 구간에만 태그 열고/닫기**
 
 ```csharp
 // ❌ 기존: 픽셀마다 태그
@@ -303,27 +287,14 @@ for (int c = 0; c < cols; c++)
 
 [세부 코드 보기 - GenerateAsciiFromFrame](https://github.com/Hunobas/Song-Of-Jupitor/blob/eb4c59e1717a806b9d3d89dc7e6dd77ab297f198/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L690)
 
-**Before/After 비교:**
-
-| 케이스 | 기존 문자열 | 개선 문자열 |
-|--------|------------|-----------|
-| 동일 색 5개 | `<color>A</color><color>B</color>...` (95자) | `<color>ABCDE</color>` (28자) |
-| 3색 전환 | `<color>A</color><color>B</color><color>C</color>` (57자) | `<color>A</color><color>B</color><color>C</color>` (57자) |
-
-**실제 효과**: 
-- 일반적인 이미지는 인접 픽셀끼리 색이 비슷함
-- 평균적으로 태그 개수 **70-80% 감소**
-
 </details>
 
 <details>
-<summary><b>🔧 해결 과정 3: 12bit 색 양자화 + 캐싱</b></summary>
+<summary><b>🔧 해결 과정 3: "잦은 색상 변경 구간 == 잦은 컬러 태그 추가"로 문자열 오버헤드 급증</b></summary>
 
-<br />
+<br /> [문제 코드 보기 - 지나치게 엄밀한 색상 계산 과정](https://github.com/Hunobas/Song-Of-Jupitor/blob/687a96614dea727599ce651bbc00cf15cac9f099/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L400)
 
-**문제**: [24bit 색상(16M가지) → 태그 문자열 생성 비용 높음](https://github.com/Hunobas/Song-Of-Jupitor/blob/687a96614dea727599ce651bbc00cf15cac9f099/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L422C21-L422C33)
-
-**해결**: 각 채널을 4bit로 양자화 → 4096가지 색만 사용
+**각 채널을 4bit로 양자화 → 4096가지 색만 사용**
 
 ```csharp
 // 12bit 양자화 (R4G4B4)
@@ -355,18 +326,6 @@ string GetOrMakeColorTag(int key)
 
 [세부 코드 보기 - GetOrMakeColorTag](https://github.com/Hunobas/Song-Of-Jupitor/blob/eb4c59e1717a806b9d3d89dc7e6dd77ab297f198/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L720)
 
-**Before/After:**
-
-| 항목 | 24bit | 12bit |
-|------|-------|-------|
-| 가능한 색 | 16,777,216 | **4,096** |
-| 태그 생성 횟수 | 픽셀 수만큼 | **구간 수만큼** (~500회) |
-| 캐시 적중률 | 낮음 | **높음** (>90%) |
-
-**시각적 차이**: 
-- ASCII 아트는 해상도가 낮아서 12bit로도 충분
-- 육안으로 거의 구분 불가
-
 </details>
 
 ---
@@ -385,7 +344,7 @@ string GetOrMakeColorTag(int key)
 ![시그널 퍼즐](https://github.com/user-attachments/assets/a160c3f4-1c15-4820-ba24-a88395dc58cf)
 <br /> *↑ 목표: 드래그 & 드랍 기능이 필요한 시그널 퍼즐*
 
-#### 🎯 해결 방법
+#### 🎯 핵심 구현 포인트
 
 **Unity의 EventSystem 파이프라인을 완전히 재구현**
 ```plaintext
@@ -402,9 +361,7 @@ PointerUp
 EndDragHandler
 ```
 
-**핵심 구현**
-
-1. **1단계: 기본 클릭만 구현**
+1. **기본 클릭만 구현**
 ```csharp
   // 드래그가 없어서 Slider 조작 불가
   private void PointerDown()
@@ -424,7 +381,7 @@ EndDragHandler
   }
 ```
 
-2. **2단계: 드래그 기능 추가**
+2. **드래그 기능 추가**
 ```csharp
   private void PointerDragTick()
   {
@@ -448,7 +405,7 @@ EndDragHandler
    - 마우스 왼쪽 Down → 오른쪽 Up → 이벤트 짝이 안 맞음
    - Slider Handle 클릭 → Slider 본체가 이벤트를 받아야 함
 
-<br /> 3. **3단계: Unity EventSystem과 동일한 수준으로 엣지 케이스 처리**
+<br /> 3. **Unity EventSystem과 동일한 수준으로 엣지 케이스 처리**
 
 [📂 초기 버전 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L307)
 <br /> [📂 최종 버전 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/826a59ee72650fc6df054c2b0edb57e9080fef91/Scripts/System/PanelBase.cs#L219)
@@ -462,11 +419,11 @@ EndDragHandler
 5. 예상치 못한 입력 유실에도 상태가 자동 복구됨
 
 <details>
-<summary><b>🔧 해결 과정 1: 드래그 임계값 적용</b></summary>
+<summary><b>🔧 해결 과정 1: 1픽셀만 움직여도 드래그로 인식되어 클릭이 불가능</b></summary>
 
-<br />
+<br /> [문제 코드 보기 - `PointerDragTick`](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L330)
 
-**문제**: [1픽셀만 움직여도 드래그로 인식되어 클릭이 불가능](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L330)
+**드래그 임계값 적용**
 
 ```csharp
 // Unity의 기본 임계값 캐싱
@@ -504,11 +461,11 @@ private void PointerDragTick()
 </details>
 
 <details>
-<summary><b>🔧 해결 과정 2: 중복 입력 방지</b></summary>
+<summary><b>🔧 해결 과정 2: Down 상태인데 다시 Down이 들어오면 이전 입력이 정리되지 않음</b></summary>
 
-<br />
+<br /> [문제 코드 보기 - PointerDown](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L307)
 
-**문제**: [Down 상태인데 다시 Down이 들어오면 이전 입력이 정리되지 않음](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L307)
+**중복 입력 방지**
 
 ```csharp
 private void PointerDown(PointerEventData.InputButton btn)
@@ -534,11 +491,11 @@ private void ForceReleasePointer()
 </details>
 
 <details>
-<summary><b>🔧 해결 과정 3: 버튼 짝 검증</b></summary>
+<summary><b>🔧 해결 과정 3: 왼쪽 버튼으로 Down → 오른쪽 버튼으로 Up 시 잘못된 이벤트 발생</b></summary>
 
-<br />
+<br /> [문제 코드 보기 - PointerUp](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L340)
 
-**문제**: [왼쪽 버튼으로 Down → 오른쪽 버튼으로 Up 시 잘못된 이벤트 발생](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L340)
+**버튼 짝 검증**
 
 ```csharp
 // Down 시점에 어떤 버튼인지 저장
@@ -574,15 +531,17 @@ _panelInput.OnClickRightUp   += () => PointerUp(InputButton.Right);
 </details>
 
 <details>
-<summary><b>🔧 해결 과정 4: 실제 이벤트 핸들러 찾기</b></summary>
+<summary><b>🔧 해결 과정 4: 슬라이드 클릭 이벤트를 본체가 아닌 핸들이 받음</b></summary>
+  
+<br /> [문제 코드 보기 - PointerDown](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L314)
 
-<br />
-
-**문제**: [Slider의 Handle을 클릭하면 Handle이 이벤트를 받지만, 실제로는 Slider 본체가 받아야 함](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/System/PanelBase.cs#L314)
+**핸들러 UI 버블링 기능 구현**
 
 ```csharp
 // ❌ 기존: 레이캐스트 히트된 오브젝트를 그대로 사용
-_pressedObject = HitTopMost();
+var results = RaycastAtCursor();
+if (results.Count == 0) return;
+_pressedObject = results.FirstOrDefault().gameObject;
 
 // ✅ 개선: 상위에서 실제 핸들러를 찾음
 private void PointerDown(PointerEventData.InputButton btn)
@@ -609,37 +568,22 @@ private static GameObject FindHandlerTarget<T>(GameObject start)
 
 ---
 
-### [4️⃣ 유니티 이벤트그래프 확장](#-목차)
+### [4️⃣ 유니티 이벤트그래프 → 언리얼 블루프린트처럼 확장](#-목차)
 
 #### 🚨 문제 상황
 
 **기존 이벤트 그래프는 2개 이상 파라미터 메서드 호출이 불가능**
 
-Unity 기본 `UnityEvent`는 최대 1개 파라미터만 지원하며, 기존 이벤트 그래프의 `Invoke()` 노드도 동일한 제약이 있었습니다.
+Unity 기본 `UnityEvent`에서 최대 1개 파라미터만 지원하는 `Invoke()` 노드의 한계가 명확했으며, 일련의 노드 실행 흐름을 제어할 수도 없었습니다.
 
 - 컷씬 연출에 필요한 복잡한 메서드 호출 불가 (예: `SetCameraShake(amplitude, frequency, duration)`)
 - 파라미터마다 노드를 쪼개면 **실행 순서 보장 안 됨**
-- 기획팀이 직접 그래프 편집 시 **실수 확률 증가**
+- **Unreal 블루프린트**처럼 한 노드의 실행이 정확히 끝나는 순간 다음 노드로 실행이 불가능
 
 <img width="781" height="366" alt="image" src="https://github.com/user-attachments/assets/69ea3e47-2097-444d-8cc9-b94cc31b73b1" />
 <br /> *↑ 최대 1개 파라미터 메서드만 호출할 수 있는 기존 이벤트그래프 `Invoke` 노드*
 
-#### 🎯 해결 방법
-
-**노드 생명주기 기반 커스텀 액션 시스템 구축**
-
-```plaintext
-[기존 Invoke 노드]
-단순 메서드 호출 → 즉시 다음 노드
-
-[구현한 ActionNode 시스템]
-Init() → Delay 대기 → OnStart() → OnUpdate() (매 프레임) → OnComplete()
-          ↓                                ↓
-    WaitPolicy에 따라              IsFinished == true 감지
-    다음 노드 진행 여부 결정          → 다음 노드 진행
-```
-
-**핵심 구현 포인트**
+#### 🎯 핵심 구현 포인트
 
 1. **IActionNode 인터페이스로 노드 생명주기 정의**
 ```csharp
@@ -677,45 +621,9 @@ public enum WaitPolicy
 <br /> *↑ 2개 이상의 파라미터를 받을 수 있고 실행 흐름을 커스텀할 수 있는 이벤트그래프 커스텀 노드*
 
 <details>
-<summary><b>🔧 구현 과정 1: 노드 생명주기 표준화</b></summary>
+<summary><b>🔧 구현 과정 1: 백그라운드 실행 vs 대기 실행</b></summary>
 
-<br />
-
-**문제**: 각 노드마다 실행 방식이 달라 코드 중복 발생
-
-**해결**: `ActionNodeBase` 추상 클래스로 공통 로직 분리
-
-```csharp
-public abstract class ActionNodeBase : SequentialNode
-{
-    [Input("Delay")] public float delay = 0f;
-    [Setting("Wait Until Finished")] public bool waitUntilFinished = true;
-    [Setting("Unscaled Time")] public bool unscaledTime = false;
-
-    // 자식 노드는 이것만 구현하면 됨
-    protected abstract IActionNode CreateAction();
-
-    public sealed override BakedEventNode GetBakedNode()
-        => new BakedActionNode(CreateAction(), delay, waitUntilFinished, unscaledTime);
-}
-```
-
-[세부 코드 보기 - ActionNodeBase](https://github.com/Hunobas/Song-Of-Jupitor/blob/ff8e930744aef5769f6bb1d1b53c50be8dc31b3b/Scripts/EventGraph/Customs/ActionNodeBase.cs#L32)
-
-**성과**: 
-- 신규 노드 작성 시간 **60% 감소**
-- Delay/Wait/UnscaledTime 로직 중복 **완전 제거**
-
-</details>
-
-<details>
-<summary><b>🔧 구현 과정 2: 백그라운드 실행 vs 대기 실행</b></summary>
-
-<br />
-
-**문제**: 카메라 셰이크는 백그라운드 실행, 컷씬 이미지는 대기 필요
-
-**해결**: `BakedActionNode`에서 `WaitPolicy` 분기 처리
+<br /> **`BakedActionNode`에서 `WaitPolicy` 분기 처리**
 
 ```csharp
 public override void Invoke(Action<BakedEventNode> onDone, BakedEventNode prevNode)
@@ -740,19 +648,15 @@ public override void Invoke(Action<BakedEventNode> onDone, BakedEventNode prevNo
 [세부 코드 보기 - BakedActionNode](https://github.com/Hunobas/Song-Of-Jupitor/blob/ff8e930744aef5769f6bb1d1b53c50be8dc31b3b/Scripts/EventGraph/Customs/ActionNodeBase.cs#L52)
 
 **사용 예시:**
-- **ForceNoWait**: 카메라 셰이크 (2.5초 페이드아웃 중에도 다음 노드 진행)
-- **ForceWait**: 컷씬 이미지 (Duration 끝날 때까지 대기)
+- **ForceNoWait**: [카메라 셰이크](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/EventGraph/Customs/Nodes/Camera/Node_Start6DShake.cs) (2.5초 페이드아웃 중에도 다음 노드 진행)
+- **ForceWait**: [컷씬 이미지](https://github.com/Hunobas/Song-Of-Jupitor/blob/a2e7f56c02f078d6600144e669e1234659e749ad/Scripts/EventGraph/Customs/Nodes/Display/Node_CutsceneImage.cs) (Duration 끝날 때까지 대기)
 
 </details>
 
 <details>
-<summary><b>🔧 구현 과정 3: 런타임 Abort 시스템</b></summary>
+<summary><b>🔧 구현 과정 2: 런타임 Abort 시스템</b></summary>
 
-<br />
-
-**문제**: 노드 실행 중 필수 참조가 `null`이면 무한 대기
-
-**해결**: `EventGraphRuntime` 스택으로 현재 실행 컨텍스트 추적
+<br /> 노드 실행 중 필수 참조가 `null`이면 무한 대기하므로 **`EventGraphRuntime` 스택으로 현재 실행 컨텍스트 추적**
 
 ```csharp
 public static class EventGraphRuntime
@@ -775,20 +679,12 @@ if (brain == null)
 
 [세부 코드 보기 - EventGraphRuntime](https://github.com/Hunobas/Song-Of-Jupitor/blob/ff8e930744aef5769f6bb1d1b53c50be8dc31b3b/Scripts/EventGraph/EventGraphProcessor.cs#L12)
 
-**성과**: 
-- 그래프 실행 중 에러 발생 시 **즉시 중단 + 로그 출력**
-- 디버깅 시간 **70% 단축**
-
 </details>
 
 <details>
-<summary><b>🔧 구현 과정 4: 에디터 UI 자동 생성</b></summary>
+<summary><b>🔧 구현 과정 3: 에디터 UI 자동 생성</b></summary>
 
-<br />
-
-**문제**: 각 노드마다 커스텀 에디터 작성 필요
-
-**해결**: `ActionNodeView`로 공통 UI 자동 생성 + Reflection으로 타이틀 변경
+<br /> **`ActionNodeView`로 공통 UI 자동 생성 + Reflection으로 타이틀 변경**
 
 ```csharp
 [NodeCustomEditor(typeof(ActionNodeBase))]
@@ -815,135 +711,6 @@ public class ActionNodeView : BaseNodeView
 
 [세부 코드 보기 - ActionNodeView](https://github.com/Hunobas/Song-Of-Jupitor/blob/ff8e930744aef5769f6bb1d1b53c50be8dc31b3b/Scripts/EventGraph/Customs/ActionNodeView.cs#L12)
 
-**Before/After:**
-
-| | Before | After |
-|---|--------|-------|
-| 커스텀 에디터 코드 | 노드당 50-100줄 | **0줄** |
-| UI 일관성 | 노드마다 다름 | **완전 통일** |
-
-</details>
-
-<details>
-<summary><b>📝 실전 노드 예시 1: Node_Start6DShake</b></summary>
-
-<br />
-
-**요구사항**: 카메라 셰이크를 시작하고, **셰이크가 끝나기 전에 다음 노드로 진행**
-
-```csharp
-[NodeMenuItem(EventCategories.Camera + "카메라 6D 셰이크")]
-public sealed class Node_Start6DShake : ActionNodeBase
-{
-    [Input] public CinemachineBrain brain;
-    [Input] public NoiseSettings noiseProfile;
-    [Input] public float amplitude = 3f;
-    [Input] public float frequency = 3f;
-    [Input] public float shakeDuration = 2.5f;
-
-    protected override string DisplayName => "카메라 셰이크";
-    protected override WaitPolicy WaitBehavior => WaitPolicy.ForceNoWait;  // ★
-
-    protected override IActionNode CreateAction()
-        => new Start6DShakeAction(brain, noiseProfile, amplitude, frequency, shakeDuration);
-}
-```
-
-```csharp
-sealed class Start6DShakeAction : IActionNode
-{
-    public void OnStart(CoroutineDelegator delegator)
-    {
-        // Perlin Noise 초기 설정
-        _perlin.m_AmplitudeGain = _amp;
-        _perlin.m_FrequencyGain = _freq;
-        
-        // 2.5초 페이드아웃 시작 (백그라운드)
-        _delegator.InvokeOnMono(FadeOut());
-    }
-    
-    IEnumerator FadeOut()
-    {
-        float t = 0f;
-        while (t < _dur)
-        {
-            t += Time.deltaTime;
-            _perlin.m_AmplitudeGain = Mathf.Lerp(_amp, 0f, t / _dur);
-            yield return null;
-        }
-    }
-}
-```
-
-[전체 코드 보기](https://github.com/Hunobas/Song-Of-Jupitor/blob/ff8e930744aef5769f6bb1d1b53c50be8dc31b3b/Scripts/EventGraph/Customs/Nodes/Camera/Node_Start6DShake.cs#L15)
-
-**결과**: 
-- 다음 노드(대사 재생)가 **즉시 실행**
-- 셰이크는 **백그라운드에서 2.5초간 페이드아웃**
-
-</details>
-
-<details>
-<summary><b>📝 실전 노드 예시 2: Node_CutsceneImage</b></summary>
-
-<br />
-
-**요구사항**: 컷씬 이미지를 표시하고, **Duration이 끝날 때까지 대기**
-
-```csharp
-[NodeMenuItem(EventCategories.Display + "컷씬 이미지")]
-public sealed class Node_CutsceneImage : ActionNodeBase
-{
-    [Input] CutscenePanelBase _panel;
-    [Input] Sprite _sprite;
-    [Input] float _duration = 1.0f;
-    
-    [ToggleLeft] bool _useVignette = false;
-    [ShowIf(nameof(_useVignette))] bool _vignetteAnimated = false;
-
-    protected override string DisplayName => "컷씬 이미지";
-    // WaitPolicy 지정 안 함 → Inherit → 노드의 waitUntilFinished 따름
-
-    protected override IActionNode CreateAction()
-        => new CutsceneImageAction(_panel, _sprite, _useVignette, _vignetteAnimated, _duration);
-}
-```
-
-```csharp
-sealed class CutsceneImageAction : IActionNode
-{
-    public void OnStart(CoroutineDelegator delegator)
-    {
-        _panel.ShowSprite(_sprite);
-        
-        if (_useVignette)
-        {
-            _panel.ShowVignette();
-            if (_vignetteAnimated)
-                _panel.VignetteAnimator.Play(0, 0, 0f);
-        }
-    }
-
-    public void OnUpdate(float deltaTime)
-    {
-        _elapsed += deltaTime;
-        if (_elapsed >= _duration)
-        {
-            _panel.CloseSprite();
-            _finished = true;  // ★ 여기서 다음 노드로 진행
-        }
-    }
-}
-```
-
-[전체 코드 보기](https://github.com/Hunobas/Song-Of-Jupitor/blob/ff8e930744aef5769f6bb1d1b53c50be8dc31b3b/Scripts/EventGraph/Customs/Nodes/Display/Node_CutsceneImage.cs#L9)
-
----
-
-**결과**: 
-- Duration(1초) 동안 **이미지 표시**
-- 1초 후 자동으로 **다음 노드로 진행**
-
 </details>
 
 ---
@@ -966,19 +733,9 @@ Unity URP에서 BaseLayer 카메라가 여러 개 있는 씬에서는 모션 벡
 
 ---
 
-#### 🎯 해결 방법
+#### 🎯 핵심 구현 포인트
 
 **모션 벡터가 필요 없는 정적 방향 블러 Scriptable Render Feature 구현**
-
-```plaintext
-[Unity 기본 Motion Blur]
-모션 벡터 텍스처 필요 → BaseLayer 카메라 충돌
-
-[커스텀 Camera Blur]
-방향/중심점 기반 정적 블러 → 모션 벡터 불필요
-```
-
-**핵심 구현 포인트**
 
 1. **2가지 블러 타입 지원**
 ```csharp
@@ -1011,7 +768,7 @@ public enum BlurMethod
 #### 📊 성과
 
 ![Jupitor-Prologue-WindowsMacLinux-Unity2022 3 62f2_DX11_2025-12-1307-55-40-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/359d2e29-2e54-4c56-a11b-4fa64f54b5e4)
-<br /> *Timeline에서 편집 가능한 정적 모션 블러*
+<br /> *↑ Timeline에서 편집 가능한 정적 모션 블러*
 
 1. 모션 벡터 텍스처 의존성 제거된 연출
 2. **각도/중심점 자유롭게 설정** 가능한 블러 방향
@@ -1021,11 +778,7 @@ public enum BlurMethod
 <details>
 <summary><b>🔧 구현 과정 1: Scriptable Render Feature 기반 구조</b></summary>
 
-<br />
-
-**문제**: Unity 기본 Volume Override는 모션 벡터에 의존
-
-**해결**: Custom Render Pass로 완전히 독립적인 블러 구현
+<br /> **Custom Render Pass로 완전히 독립적인 블러 구현**
 
 ```csharp
 // Scriptable Renderer Feature
