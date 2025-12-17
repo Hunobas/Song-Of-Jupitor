@@ -85,6 +85,8 @@
 | 디버깅 소요 시간 | 평균 60분 | 평균 30분 | **50% 감소** |
 | 신규 모드 추가 시간 | - | 20분 이내 | `IPlayMode`만 구현 |
 
+<br />
+
 <details>
 <summary><b>🔧 해결 과정 1: 일시정지 해제 시 이전 플레이 모드를 기억하지 못함</b></summary>
 
@@ -108,6 +110,9 @@
 <br /> [세부 코드 보기 - `TimelineController.OnTimelineStopped`](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/TimelineController.cs#L102)
 
 </details>
+
+<br />
+<br />
 
 ---
 
@@ -153,6 +158,8 @@
 | 프레임 비중 | 70.4% | **3.5%** | **95% 감소** |
 | 문자열 길이 | 76,800자 | ~20,000자 | **74% 감소** |
 | 아트 팀 작업 시간 | 조정당 5분 | **실시간** | - |
+
+<br />
 
 <details>
 <summary><b>🔧 해결 과정 1: GPU → CPU 전송이 끝날 때까지 메인 스레드 블록킹</b></summary>
@@ -328,6 +335,9 @@ string GetOrMakeColorTag(int key)
 
 </details>
 
+<br />
+<br />
+
 ---
 
 ### [3️⃣ 패널 드래그 앤 드랍 시스템 확장](#-목차)
@@ -417,6 +427,8 @@ EndDragHandler
 3. 마우스 양쪽 버튼을 동시에 사용해도 이벤트 충돌 없음
 4. **Slider 본체**가 반응
 5. 예상치 못한 입력 유실에도 상태가 자동 복구됨
+
+<br />
 
 <details>
 <summary><b>🔧 해결 과정 1: 1픽셀만 움직여도 드래그로 인식되어 클릭이 불가능</b></summary>
@@ -566,6 +578,9 @@ private static GameObject FindHandlerTarget<T>(GameObject start)
 
 </details>
 
+<br />
+<br />
+
 ---
 
 ### [4️⃣ 유니티 이벤트그래프 → 언리얼 블루프린트처럼 확장](#-목차)
@@ -619,6 +634,8 @@ public enum WaitPolicy
 
 <img width="699" height="425" alt="image" src="https://github.com/user-attachments/assets/3f5355f3-19d4-4490-a180-5c655b812547" />
 <br /> *↑ 2개 이상의 파라미터를 받을 수 있고 실행 흐름을 커스텀할 수 있는 이벤트그래프 커스텀 노드*
+
+<br />
 
 <details>
 <summary><b>🔧 구현 과정 1: 백그라운드 실행 vs 대기 실행</b></summary>
@@ -713,6 +730,9 @@ public class ActionNodeView : BaseNodeView
 
 </details>
 
+<br />
+<br />
+
 ---
 
 ### [5️⃣ 모션벡터 없는 카메라 모션블러 셰이더 구현](#-목차)
@@ -772,6 +792,8 @@ public enum BlurMethod
 2. **각도/중심점 자유롭게 설정** 가능한 블러 방향
 3. Timeline 애니메이션 지원
 4. 카메라가 정지 상태에서도 **속도감 연출 가능**
+
+<br />
 
 <details>
 <summary><b>🔧 구현 과정 1: Scriptable Render Feature 기반 구조</b></summary>
