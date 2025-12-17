@@ -731,8 +731,6 @@ Unity URP에서 BaseLayer 카메라가 여러 개 있는 씬에서는 모션 벡
 <img width="1839" height="916" alt="image" src="https://github.com/user-attachments/assets/52ed330a-0238-4c12-be0d-0bc4d6086860" />
 <br /> *↑ Main Camera와 Player Camera가 모두 Base Layer → Motion Blur Volume 무시됨*
 
----
-
 #### 🎯 핵심 구현 포인트
 
 **모션 벡터가 필요 없는 정적 방향 블러 Scriptable Render Feature 구현**
@@ -872,13 +870,9 @@ float3 BlurRadial(float2 uv)
 </details>
 
 <details>
-<summary><b>🔧 구현 과정 3: 애니메이션 친화적 Controller</b></summary>
+<summary><b>🔧 구현 과정 3: 애니메이션 친화적 컨트롤러</b></summary>
 
-<br />
-
-**문제**: Volume Override는 Timeline에서 키프레임 애니메이션 어려움
-
-**해결**: MonoBehaviour 컴포넌트로 직접 필드 노출
+<br /> Volume Override는 타임라인에서 키프레임 애니메이팅이 어려우므로 **MonoBehaviour 컴포넌트로 직접 필드 노출**
 
 ```csharp
 public class CameraBlurController : MonoBehaviour 
@@ -903,13 +897,11 @@ public class CameraBlurController : MonoBehaviour
 </details>
 
 <details>
-<summary><b>🔧 구현 과정 4: Downsample + Iterations로 성능 최적화</b></summary>
+<summary><b>🔧 구현 과정 4: 다운샘플로 성능 최적화</b></summary>
 
 <br />
 
-**문제**: 풀 해상도에서 13-tap 샘플링 → 비용 높음
-
-**해결**: Downsample 후 블러 → 업샘플
+**다운샘플 후 블러 → 업샘플**
 
 ```csharp
 public bool Setup(ScriptableRenderer renderer, ref RenderingData rd) 
@@ -941,14 +933,6 @@ public override void Execute(ScriptableRenderContext ctx, ref RenderingData rd)
 ```
 
 [세부 코드 보기 - CameraBlurPass](https://github.com/Hunobas/Song-Of-Jupitor/blob/10a1e7beee04279e75c236bbac08075c8c4097b4/Scripts/Renders/CameraBlur/CameraBlurPass.cs#L77)
-
-**성능 트레이드오프:**
-
-| 설정 | 품질 | 성능 |
-|------|------|------|
-| Downsample 1 + Iterations 1 | 최고 | 낮음 |
-| Downsample 2 + Iterations 2 | 높음 | **중간** ← 권장 |
-| Downsample 4 + Iterations 1 | 낮음 | 최고 |
 
 </details>
 
