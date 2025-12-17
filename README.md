@@ -72,8 +72,67 @@
 
 <img width="1322" height="456" alt="image" src="https://github.com/user-attachments/assets/73d29e7e-e055-409d-a52c-ab6ecd0f5ad0" />
 
-1. [**상태 중첩 방지** - `GameState.ChangePlayMode`](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/GameState.cs#L60)
-2. [**자동 정리 훅** - `PanelMode.OnExit`](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/PanelMode.cs#L35)
+1. **재활용될 플레이 모드 미리 정의**
+
+```csharp
+// GameState.cs
+protected override void Awake()
+{
+    base.Awake();
+    _pauseMode  ??= new PauseMode(this);
+    _cinemaMode ??= new CinemaMode(this);
+    _dialogMode ??= new DialogMode(this);
+    _panelMode  ??= new PanelMode(this);
+    _normalMode ??= new NormalMode();
+
+    _activeMode = _normalMode;
+}
+```
+
+2. **상태 중첩 방지**
+   
+```csharp
+  public void ChangePlayMode(IPlayMode next)
+  {
+      if (next == null || ReferenceEquals(_activeMode, next))
+          return;
+      
+      // 시네마 모드는 특별하게, 일시정지 모드 이외 다른 모드의 방해를 받지 않아야 하므로 자신이 시네마 모드를 끝내기 전까지 모드 변경 무시. 
+      if (IsPlayingCinema && !ReferenceEquals(next, PauseMode))
+          return;
+      
+      // 패널 모드 한번 더 체크 (디버깅 시 패널 모드 자동 종료)
+      if (IsOperatingPanel && PanelMode.Controller != null)
+      {
+          PanelMode.Controller.EndPanelForcely();
+      }
+
+      var prev = _activeMode;
+      prev?.OnExit(next);
+      _activeMode = next;
+      _activeMode.OnEnter(prev);
+
+      InputManager.Instance?.UpdateCursorLock();
+  }
+```
+
+3. **자동 정리 훅**
+
+```csharp
+// 패널 모드의 경우 PanelMode.OnExit에서 UI 상태 정리
+public void OnExit(IPlayMode next)
+{
+    if (Controller == null)
+        return;
+    
+    Controller = null;
+    OnExitEvent?.Invoke();
+    _owner.ScreenDirector.FadeInIcons();
+    _owner.StaminaBarUI.CanRun = true;
+    _owner.ScreenDirector.ShowCrosshair();
+    _owner.InputManager.BindToWorld();
+}
+```
 
 [📂 전체 코드 보기](https://github.com/Hunobas/Song-Of-Jupitor/blob/7386ab978fc3115a13a700758c7a618567bc168a/Scripts/System/GameState.cs#L15)
 
