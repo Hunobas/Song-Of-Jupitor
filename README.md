@@ -254,7 +254,7 @@ void Update()
 </details>
 
 <details>
-<summary><b>🔧 해결 과정 2: 모든 픽셀마다 생성되는 컬러 태그로 문자열 오버헤드 급증</b></summary>
+<summary><b>🔧 해결 과정 2: 모든 픽셀마다 생성되는 컬러 태그로 문자열 오버헤드 증가</b></summary>
 
 <br /> [문제 코드 보기 - 픽셀 당 Append(`<color=#RRGGBB>문자</color>`) 수행](https://github.com/Hunobas/Song-Of-Jupitor/blob/687a96614dea727599ce651bbc00cf15cac9f099/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L421)
 
@@ -297,7 +297,7 @@ for (int c = 0; c < cols; c++)
 </details>
 
 <details>
-<summary><b>🔧 해결 과정 3: "잦은 색상 변경 구간 == 잦은 컬러 태그 추가"로 문자열 오버헤드 급증</b></summary>
+<summary><b>🔧 해결 과정 3: "잦은 색상 변경 구간 == 잦은 컬러 태그 추가"로 문자열 오버헤드 증가</b></summary>
 
 <br /> [문제 코드 보기 - 지나치게 엄밀한 색상 계산 과정](https://github.com/Hunobas/Song-Of-Jupitor/blob/687a96614dea727599ce651bbc00cf15cac9f099/Scripts/Renders/ASCIIImage/AsciiImageUGUI.cs#L400)
 
