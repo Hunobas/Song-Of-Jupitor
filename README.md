@@ -70,8 +70,6 @@
 
 **중앙 집중식 FSM으로 모든 플레이 모드를 단일 책임 관리**
 
-<img width="1322" height="456" alt="image" src="https://github.com/user-attachments/assets/73d29e7e-e055-409d-a52c-ab6ecd0f5ad0" />
-
 1. **재활용될 플레이 모드 미리 정의**
 
 ```csharp
