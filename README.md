@@ -113,8 +113,6 @@ Backface Threshold: 15
 | MeshBaker 적용 | 750 | 5ms | 8ms | 80~100 |
 | 오클루전 컬링 적용 | 601 | 8ms | 6.26ms | **120+** |
 
-*기준 - CPU 라이젠5 7600X | GPU NVDIA 3060Ti*
-
 <br />
 
 <details>
