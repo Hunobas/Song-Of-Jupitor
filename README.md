@@ -42,7 +42,7 @@
 
 ### 3. 역할 분담
 
-> - 박태훈 : 최적화 + 게임 흐름 FSM 구축 + 사인파 퍼즐 로직 구현 + 패널 가상 커서 드래그 & 드랍 시스템 + 로컬라이징 + `SliceGlitch/ASCIIImage/MotionBlur` 셰이더 구현
+> - 박태훈 : 로우엔드 PC 타겟 최적화 + 게임 흐름 FSM 구축 + 사인파 퍼즐 로직 구현 + 패널 가상 커서 드래그 & 드랍 시스템 + 로컬라이징 + `SliceGlitch/ASCIIImage/MotionBlur` 셰이더 구현
 
 <br />
 
