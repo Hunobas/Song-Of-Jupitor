@@ -111,7 +111,7 @@ Backface Threshold: 15
 <br />
 
 <details>
-<summary><b>🔧 고찰 과정 1: 콤바인 메쉬 적용 후 **실시간 그림자로 Verts 수 폭증** (2.5M → 11.9M)</b></summary>
+<summary><b>🔧 고찰 과정 1: 콤바인 메쉬 적용 후 실시간 그림자로 Verts 수 폭증 (2.5M → 11.9M)</b></summary>
 
 <br />
 
