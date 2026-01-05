@@ -95,14 +95,16 @@ Backface Threshold: 15
 
 #### 📊 성과
 
+<img width="1548" height="591" alt="image" src="https://github.com/user-attachments/assets/6b35a453-6a45-4258-9635-3bcff6062e97" />
+<br /> *머터리얼 아틀라스 및 콤바인 메쉬 적용 전후*
+<br /> 
+
 <img width="1914" height="487" alt="image" src="https://github.com/user-attachments/assets/ae54d0cd-f24b-4357-8bf0-73c0634bd549" />
 <br /> *최적화 전: CPU/GPU 총합 1프레임 평균 15ms 소요, 스파이크 다수*
-
 <br />
 
 <img width="1887" height="464" alt="image" src="https://github.com/user-attachments/assets/726fb8cd-71cc-4869-b42b-cff7c3be2427" />
 <br /> *최적화 후: CPU/GPU 모두 안정화*
-
 <br />
 
 | 단계 | Batches | CPU | GPU | FPS |
