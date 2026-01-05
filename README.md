@@ -13,11 +13,12 @@
   - [참여 인원](#2-참여-인원)
   - [역할 분담](#3-역할-분담)
 - 📌 주요 작업 내용
-  - [1️⃣ FSM 기반 플레이 모드 아키텍처 설계](#1️⃣-fsm-기반-플레이-모드-아키텍처-설계)
-  - [2️⃣ ASCII 이미지 UGUI 렌더러 플러그인 구현](#2️⃣-ascii-이미지-ugui-렌더러-플러그인-구현)
-  - [3️⃣ 패널 드래그 앤 드랍 시스템 확장](#3️⃣-패널-드래그-앤-드랍-시스템-확장)
-  - [4️⃣ 유니티 이벤트그래프 → 언리얼 블루프린트처럼 확장](#4️⃣-유니티-이벤트그래프-확장)
-  - [5️⃣ 모션벡터 없는 카메라 모션블러 셰이더 구현](#5️⃣-모션벡터-없는-카메라-모션블러-셰이더-구현)
+  - [1️⃣ PC 렌더링 파이프라인 최적화](#1️⃣-pc-렌더링-파이프라인-최적화)
+  - [2️⃣ FSM 기반 플레이 모드 아키텍처 설계](#2️⃣-fsm-기반-플레이-모드-아키텍처-설계)
+  - [3️⃣ ASCII 이미지 UGUI 렌더러 플러그인 구현](#3️⃣-ascii-이미지-ugui-렌더러-플러그인-구현)
+  - [4️⃣ 패널 드래그 앤 드랍 시스템 확장](#4️⃣-패널-드래그-앤-드랍-시스템-확장)
+  - [5️⃣ 유니티 이벤트그래프 → 언리얼 블루프린트처럼 확장](#5️⃣-유니티-이벤트그래프-확장)
+  - [6️⃣ 모션벡터 없는 카메라 모션블러 셰이더 구현](#6️⃣-모션벡터-없는-카메라-모션블러-셰이더-구현)
 
 <br />
 
@@ -47,9 +48,104 @@
 
 ---
 
+### [1️⃣ PC 렌더링 파이프라인 최적화](#-목차)
+
+#### 🚨 문제 상황
+
+<img width="1370" height="814" alt="image" src="https://github.com/user-attachments/assets/b1cb833c-c6ae-4603-bdc4-5901bd7b340f" />
+
+**400만 버텍스 + 300개 머터리얼 → 30~60 FPS로 불안정**
+
+목성의 노래의 우주 정거장 씬은 3060ti 환경에서도 에디터 씬 전환에 2초 이상, 인게임 FPS도 들쭉날쭉했습니다.
+
+- 배칭 수 **2,600개** 이상
+- CPU Usage만 한 프레임에 **10ms** 이상
+
+<img width="482" height="360" alt="image" src="https://github.com/user-attachments/assets/6e7cd80a-cb53-408a-adff-cc3937bbbceb" />
+<br /> *↑ 최적화 전: 배칭 수 2,600개, CPU 프레임당 10ms 이상*
+
+#### 🎯 핵심 구현 포인트
+
+**MeshBaker로 텍스처 아틀라스 + 콤바인 메쉬 → 오클루전 컬링으로 GPU 부하 감소**
+
+1. **MeshBaker 텍스처 아틀라스 + 콤바인 메쉬**
+```plaintext
+Before: 300개 머터리얼 × 수천 개 메쉬 → SRP Batcher로도 Draw Call 수천 번
+After:  방 단위 1개 머터리얼 × 1개 메쉬 → Draw Call 1개
+```
+
+- `MB3_TextureBaker`로 머터리얼들을 텍스처 아틀라스로 통합
+- `MB3_MeshBakerGrouper`로 방 단위 클러스터링 후 콤바인 메쉬 생성
+
+2. **오클루전 컬링 설정**
+```plaintext
+Smallest Occluder: 1m
+Smallest Hole: 0.5m
+Backface Threshold: 15
+```
+
+- 실내 씬 특성상 벽/문이 자연스러운 Occluder 역할
+- GPU가 보이지 않는 오브젝트를 렌더링하지 않음
+
+<br />
+
+[📂 MeshBaker 에디터 확장 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/main/Plugins/MeshBaker/Editor/MB3_MeshBakerGrouperEditor.cs)
+<br /> [📜 개발일지 전문](https://velog.io/@po127992/목성의-노래-MeshBaker-최적화-삽질기-텍스처-아틀라스만-vs-콤바인-메쉬까지)
+
+#### 📊 성과
+
+<img width="1914" height="487" alt="image" src="https://github.com/user-attachments/assets/ae54d0cd-f24b-4357-8bf0-73c0634bd549" />
+<br /> *↑ 최적화 전: CPU/GPU 총합 1프레임 평균 15ms 소요, 스파이크 다수*
+
+<img width="1887" height="464" alt="image" src="https://github.com/user-attachments/assets/726fb8cd-71cc-4869-b42b-cff7c3be2427" />
+<br /> *↑ 최적화 후: CPU/GPU 모두 안정화*
+
+| 단계 | Batches | CPU | GPU | FPS |
+|------|---------|-----|-----|-----|
+| 기준선 | 2,650 | 12.5ms | 8.24ms | 30~60 |
+| MeshBaker 적용 | 750 | 5ms | 8ms | 80~100 |
+| 오클루전 컬링 적용 | 601 | 8ms | 6.26ms | **120+** |
+
+*기준 - CPU 라이젠5 7600X | GPU NVDIA 3060Ti*
+
+<br />
+
+<details>
+<summary><b>🔧 고찰 과정 1: 콤바인 메쉬 적용 후 **실시간 그림자로 Verts 수 폭증** (2.5M → 11.9M)</b></summary>
+
+<br />
+
+<img width="1271" height="481" alt="image" src="https://github.com/user-attachments/assets/869a229f-477d-4ff6-a61f-69fa2bf32e56" />
+<br /> *↑ 실시간 그림자 ON 시 Verts 폭증 현상*
+
+**가설:** 콤바인 메쉬 없이 텍스처 아틀라스만 적용하면 그림자 문제가 해결될까?
+
+MeshBaker 에디터 스크립트를 확장하여 "Material Only" 방식을 직접 구현했습니다:
+- 원본 메쉬의 UV를 Atlas 좌표로 재매핑
+- 다중 머터리얼(서브메쉬) 케이스 처리
+- 메쉬 에셋 자동 저장으로 프리팹 호환
+
+**실험 결과:**
+
+| 항목 | 콤바인 메쉬 | 텍스처 아틀라스 Only | 변화 |
+|------|------------|-------------------|------|
+| FPS | 75.3 | 53.6 | 📉 -29% |
+| Batches | 5,808 | 10,089 | 📉 +74% |
+| Verts | 64.3M | 18.3M | 📈 -72% |
+
+Verts는 72% 감소했지만 **Draw Call 74% 증가로 전체 성능 하락**.
+이 씬에서는 콤바인 메쉬 클러스터링 + 오클루전 컬링 및 LOD + 라이트맵 베이킹이 정답이었습니다.
+
+</details>
+
+<br />
+<br />
+
+---
+
 ## 📌 주요 작업 내용
 
-### [1️⃣ FSM 기반 플레이 모드 아키텍처 설계](#-목차)
+### [2️⃣ FSM 기반 플레이 모드 아키텍처 설계](#-목차)
 
 #### 🚨 문제 상황
 
@@ -173,7 +269,7 @@ public void OnExit(IPlayMode next)
 
 ---
 
-### [2️⃣ ASCII 이미지 UGUI 렌더러 플러그인 구현](#-목차)
+### [3️⃣ ASCII 이미지 UGUI 렌더러 플러그인 구현](#-목차)
 
 #### 🚨 문제 상황
 
@@ -397,7 +493,7 @@ string GetOrMakeColorTag(int key)
 
 ---
 
-### [3️⃣ 패널 드래그 앤 드랍 시스템 확장](#-목차)
+### [4️⃣ 패널 드래그 앤 드랍 시스템 확장](#-목차)
 
 #### 🚨 문제 상황
 
@@ -640,7 +736,7 @@ private static GameObject FindHandlerTarget<T>(GameObject start)
 
 ---
 
-### [4️⃣ 유니티 이벤트그래프 → 언리얼 블루프린트처럼 확장](#-목차)
+### [5️⃣ 유니티 이벤트그래프 → 언리얼 블루프린트처럼 확장](#-목차)
 
 #### 🚨 문제 상황
 
@@ -793,7 +889,7 @@ public class ActionNodeView : BaseNodeView
 
 ---
 
-### [5️⃣ 모션벡터 없는 카메라 모션블러 셰이더 구현](#-목차)
+### [6️⃣ 모션벡터 없는 카메라 모션블러 셰이더 구현](#-목차)
 
 #### 🚨 문제 상황
 
