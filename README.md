@@ -89,7 +89,7 @@ Backface Threshold: 15
 
 <br />
 
-[📂 MeshBaker 에디터 확장 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/main/Plugins/MeshBaker/Editor/MB3_MeshBakerGrouperEditor.cs)
+[📂 MeshBaker 에디터 확장 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/main/Scripts/Editor/MB3_ApplyCombinedMaterialToSourceObjects.cs)
 <br /> [📜 개발일지 전문](https://velog.io/@po127992/목성의-노래-MeshBaker-최적화-삽질기-텍스처-아틀라스만-vs-콤바인-메쉬까지)
 
 #### 📊 성과
