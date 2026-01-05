@@ -62,7 +62,7 @@
 - CPU Usage만 한 프레임에 **10ms** 이상
 
 <img width="482" height="360" alt="image" src="https://github.com/user-attachments/assets/6e7cd80a-cb53-408a-adff-cc3937bbbceb" />
-<br /> *↑ 최적화 전: 배칭 수 2,600개, CPU 프레임당 10ms 이상*
+<br /> * ↑ 최적화 전: 배칭 수 2,600개, CPU 프레임당 10ms 이상*
 
 #### 🎯 핵심 구현 포인트
 
@@ -95,10 +95,12 @@ Backface Threshold: 15
 #### 📊 성과
 
 <img width="1914" height="487" alt="image" src="https://github.com/user-attachments/assets/ae54d0cd-f24b-4357-8bf0-73c0634bd549" />
-<br /> *↑ 최적화 전: CPU/GPU 총합 1프레임 평균 15ms 소요, 스파이크 다수*
+<br /> * ↑ 최적화 전: CPU/GPU 총합 1프레임 평균 15ms 소요, 스파이크 다수*
 
 <img width="1887" height="464" alt="image" src="https://github.com/user-attachments/assets/726fb8cd-71cc-4869-b42b-cff7c3be2427" />
-<br /> *↑ 최적화 후: CPU/GPU 모두 안정화*
+<br /> * ↑ 최적화 후: CPU/GPU 모두 안정화*
+
+<br />
 
 | 단계 | Batches | CPU | GPU | FPS |
 |------|---------|-----|-----|-----|
@@ -116,7 +118,7 @@ Backface Threshold: 15
 <br />
 
 <img width="1271" height="481" alt="image" src="https://github.com/user-attachments/assets/869a229f-477d-4ff6-a61f-69fa2bf32e56" />
-<br /> *↑ 실시간 그림자 ON 시 Verts 폭증 현상*
+<br /> * ↑ 실시간 그림자 ON 시 Verts 폭증 현상*
 
 **가설:** 콤바인 메쉬 없이 텍스처 아틀라스만 적용하면 그림자 문제가 해결될까?
 
@@ -158,7 +160,7 @@ Verts는 72% 감소했지만 **Draw Call 74% 증가로 전체 성능 하락**.
 - 디버깅 시 어디서 상태가 꼬였는지 추적하는 데에 **평균 1시간 소요**
 
 ![GameState 버그 영상](https://github.com/user-attachments/assets/fa973d2f-df58-483d-ae3b-05d5104e9bc6)
-<br /> *↑ 패널 모드 진입 중 시네마 모드가 끼어들면 발생하는 조작 불가 문제*
+<br /> * ↑ 패널 모드 진입 중 시네마 모드가 끼어들면 발생하는 조작 불가 문제*
 
 #### 🎯 핵심 구현 포인트
 
@@ -283,7 +285,7 @@ public void OnExit(IPlayMode next)
 - 아트 팀원: "이거 좀 더 밝게 해주세요" → 프로그래머 호출
 
 ![image (2)](https://github.com/user-attachments/assets/389ec02c-9fdf-4cdd-aa57-0c9e79bbfa4b)
-<br /> *↑ 목표: Unity 에디터에서 실시간 미리보기 가능한 아스키 렌더러*
+<br /> * ↑ 목표: Unity 에디터에서 실시간 미리보기 가능한 아스키 렌더러*
 
 #### 🎯 핵심 구현 포인트
 
@@ -505,7 +507,7 @@ string GetOrMakeColorTag(int key)
 - 드래그 중 캔버스 밖으로 벗어나면 **입력 유실**
 
 ![시그널 퍼즐](https://github.com/user-attachments/assets/a160c3f4-1c15-4820-ba24-a88395dc58cf)
-<br /> *↑ 목표: 드래그 & 드랍 기능이 필요한 시그널 퍼즐*
+<br /> * ↑ 목표: 드래그 & 드랍 기능이 필요한 시그널 퍼즐*
 
 #### 🎯 핵심 구현 포인트
 
@@ -749,7 +751,7 @@ Unity 기본 `UnityEvent`에서 최대 1개 파라미터만 지원하는 `Invoke
 - **Unreal 블루프린트**처럼 한 노드의 실행이 정확히 끝나는 순간 다음 노드로 실행이 불가능
 
 <img width="781" height="366" alt="image" src="https://github.com/user-attachments/assets/69ea3e47-2097-444d-8cc9-b94cc31b73b1" />
-<br /> *↑ 최대 1개 파라미터 메서드만 호출할 수 있는 기존 이벤트그래프 `Invoke` 노드*
+<br /> * ↑ 최대 1개 파라미터 메서드만 호출할 수 있는 기존 이벤트그래프 `Invoke` 노드*
 
 #### 🎯 핵심 구현 포인트
 
@@ -903,7 +905,7 @@ Unity URP에서 BaseLayer 카메라가 여러 개 있는 씬에서는 모션 벡
 - 두 번째 카메라는 모션 벡터 없이 렌더링 → **모션 블러 효과 사라짐**
 
 <img width="1839" height="916" alt="image" src="https://github.com/user-attachments/assets/52ed330a-0238-4c12-be0d-0bc4d6086860" />
-<br /> *↑ Main Camera와 Player Camera가 모두 Base Layer → Motion Blur Volume 무시됨*
+<br /> * ↑ Main Camera와 Player Camera가 모두 Base Layer → Motion Blur Volume 무시됨*
 
 #### 🎯 핵심 구현 포인트
 
@@ -940,7 +942,7 @@ public enum BlurMethod
 #### 📊 성과
 
 ![Jupitor-Prologue-WindowsMacLinux-Unity2022 3 62f2_DX11_2025-12-1307-55-40-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/359d2e29-2e54-4c56-a11b-4fa64f54b5e4)
-<br /> *↑ Timeline에서 편집 가능한 정적 모션 블러*
+<br /> * ↑ Timeline에서 편집 가능한 정적 모션 블러*
 
 1. 모션 벡터 텍스처 의존성 제거된 연출
 2. **각도/중심점 자유롭게 설정** 가능한 블러 방향
