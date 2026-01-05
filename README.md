@@ -57,7 +57,7 @@
 <img width="1370" height="814" alt="image" src="https://github.com/user-attachments/assets/b1cb833c-c6ae-4603-bdc4-5901bd7b340f" />
 <br /> *400만 버텍스 + 300개 머터리얼 → 30~60 FPS로 불안정*
 
-목성의 노래의 우주 정거장 씬은 3060ti 환경에서도 에디터 씬 전환에 2초 이상, 인게임 FPS도 들쭉날쭉했습니다.
+<br /> 목성의 노래의 우주 정거장 씬은 3060ti 환경에서도 에디터 씬 전환에 2초 이상, 인게임 FPS도 들쭉날쭉했습니다.
 
 - 배칭 수 **2,600개** 이상
 - CPU Usage만 한 프레임에 **10ms** 이상
@@ -97,6 +97,8 @@ Backface Threshold: 15
 
 <img width="1914" height="487" alt="image" src="https://github.com/user-attachments/assets/ae54d0cd-f24b-4357-8bf0-73c0634bd549" />
 <br /> *최적화 전: CPU/GPU 총합 1프레임 평균 15ms 소요, 스파이크 다수*
+
+<br />
 
 <img width="1887" height="464" alt="image" src="https://github.com/user-attachments/assets/726fb8cd-71cc-4869-b42b-cff7c3be2427" />
 <br /> *최적화 후: CPU/GPU 모두 안정화*
