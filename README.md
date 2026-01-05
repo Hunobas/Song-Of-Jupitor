@@ -120,9 +120,6 @@ Backface Threshold: 15
 
 <br />
 
-<img width="1271" height="481" alt="image" src="https://github.com/user-attachments/assets/869a229f-477d-4ff6-a61f-69fa2bf32e56" />
-<br /> *실시간 그림자 ON 시 Verts 폭증 현상*
-
 **가설:** 콤바인 메쉬 없이 텍스처 아틀라스만 적용하면 그림자 문제가 해결될까?
 
 MeshBaker 에디터 스크립트를 확장하여 "Material Only" 방식을 직접 구현했습니다:
