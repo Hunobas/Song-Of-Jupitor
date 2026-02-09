@@ -1223,6 +1223,7 @@ public enum OverlapPolicy
 internal void ScheduleEnd(float fadeOutDuration, Action onComplete, GameObject linkTarget = null)
 {
     // 루프가 남아있을 때 자동 크로스페이드
+    // LoopCount == -1이면 무한반복
     if (LoopCount == -1 || LoopCount > 1)
     {
         float delay = Mathf.Max(0.01f, ClipLength - _source.LoopCrossfadeDuration);
