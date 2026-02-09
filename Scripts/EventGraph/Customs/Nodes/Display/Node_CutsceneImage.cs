@@ -22,6 +22,12 @@ namespace EventGraph
         [HideIf(nameof(_animated))]  [Input("Sprite"), SerializeField]
         Sprite _sprite;
 
+        [ToggleLeft, SerializeField, LabelText("Use Scanline")]
+        bool _useScanline = true;
+        
+        [ToggleLeft, SerializeField, LabelText("Preserve Same")]
+        bool _preserveAspect = true;
+        
         // ===== 비네트 옵션 - 전부 노드 바디에 배치 =====
         [ToggleLeft, SerializeField, LabelText("Use Vignette")]
         bool _useVignette = false;
@@ -49,7 +55,7 @@ namespace EventGraph
             => new CutsceneImageAction(
                 _panel,
                 // main
-                _animated, _imageController, _sprite,
+                _animated, _imageController, _sprite, _useScanline, _preserveAspect,
                 // vignette
                 _useVignette, _vignetteAnimated, _vignetteSpeed, _vignetteUnscaledTime,
                 // life
@@ -65,6 +71,8 @@ namespace EventGraph
             readonly bool _animated;
             readonly RuntimeAnimatorController _imageController;
             readonly Sprite _sprite;
+            readonly bool _useScanline;
+            readonly bool _preserveAspect;
 
             // vignette
             readonly bool _useVignette;
@@ -84,7 +92,7 @@ namespace EventGraph
             public CutsceneImageAction(
                 CutscenePanelBase panel,
                 // main
-                bool animated, RuntimeAnimatorController imageController, Sprite sprite,
+                bool animated, RuntimeAnimatorController imageController, Sprite sprite, bool useScanline, bool preserveAspect,
                 // vignette
                 bool useVignette, bool vignetteAnimated, float vignetteSpeed, bool vignetteUnscaledTime,
                 // life
@@ -95,6 +103,8 @@ namespace EventGraph
                 _animated = animated;
                 _imageController = imageController;
                 _sprite = sprite;
+                _useScanline = useScanline;
+                _preserveAspect = preserveAspect;
 
                 _useVignette = useVignette;
                 _vignetteAnimated = vignetteAnimated;
@@ -114,6 +124,8 @@ namespace EventGraph
                     return;
                 }
                 
+                _panel.ImagePanel.Image.preserveAspect = _preserveAspect;
+                _panel.VignettePanel.Image.preserveAspect = _preserveAspect;
                 _panel.gameObject.SetActive(true);
 
                 if (_useVignette)
@@ -154,7 +166,7 @@ namespace EventGraph
                         _panel.AssignImageController(_imageController);
                     }
 
-                    _panel.ShowSprite(null);
+                    _panel.ShowCutsceneImage(null, _useScanline);
 
                     anim.enabled = true;
                     anim.Rebind();
@@ -169,7 +181,7 @@ namespace EventGraph
                         _finished = true;
                         return;
                     }
-                    _panel.ShowSprite(_sprite);
+                    _panel.ShowCutsceneImage(_sprite, _useScanline);
                 }
 
                 _elapsed = 0f;

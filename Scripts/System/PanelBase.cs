@@ -5,13 +5,16 @@ using Cinemachine;
 using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using DG.Tweening;
+using UnityEngine.Rendering.Universal;
 
 public class PanelBase : MonoBehaviour
 {
     [Title("BaseSettings")] [SerializeField]
     private GraphicRaycaster _graphicRaycaster;
+
     [SerializeField] private IARaycaster _iaRaycaster;
     [SerializeField] private ScrollRect _scrollRect;
     [SerializeField] private Image _cursorImg;
@@ -21,6 +24,7 @@ public class PanelBase : MonoBehaviour
     [SerializeField] private InputEventAsset _hoverInput;
     [SerializeField] private Transform _endPos;
     [SerializeField] private GameObject _InteractCollider;
+    [SerializeField] private Image _screenShaderImg;
     [SerializeField] private float _aimSensitivity = 0.05f;
     [SerializeField] private float scrollSensitivity = 0.1f;
     [SerializeField] private Vector2 _canvasBoundaryOffset = new Vector2(1f, 1f);
@@ -30,6 +34,16 @@ public class PanelBase : MonoBehaviour
     protected bool isOperatingPanel;
 
     [SerializeField, ReadOnly] protected bool isHovered;
+    [SerializeField, ReadOnly] protected bool isZoomOperating = false; //카메라 전환 후 패널 조작중인지 
+
+    //Buffers
+    private UniversalAdditionalCameraData _cameraData;
+
+    public ScrollRect ScrollRect
+    {
+        get => _scrollRect;
+        set => _scrollRect = value;
+    }
 
     public bool IsOperatingPanel
     {
@@ -38,6 +52,9 @@ public class PanelBase : MonoBehaviour
     }
 
     [SerializeField, ReadOnly] private bool _isBlending;
+
+    [Title("Events")] [SerializeField] private UnityEvent _onOperatingPanel;
+    [SerializeField] private UnityEvent _onPanelOperationCompleted;
 
     private RectTransform _cursorRect;
     private RectTransform _canvasRect;
@@ -48,7 +65,7 @@ public class PanelBase : MonoBehaviour
     private float _cachedAinSensitivity;
 
     private bool _panelLock;
-    protected bool PanelKeyLock;
+    public bool PanelKeyLock;
 
     private GameObject _lastHoveredObject;
 
@@ -76,16 +93,16 @@ public class PanelBase : MonoBehaviour
 
     public InputEventAsset PanelInput => _panelInput;
 
-    public event Action OperatingPanelEvent;
-    public event Action PanelOperationCompleted;
+    public event Action OperatingPanelEvent; //패널 조작 시작 콜백
+    public event Action PanelOperationCompleted; //패널 조작 종료 콜백 
 
-    private bool _isZoomOperating = false; //카메라 전환 후 패널 조작중인지 
 
     protected virtual void Awake()
     {
         _cursorRect = _cursorImg.GetComponent<RectTransform>();
         _canvasRect = _curCanvas.GetComponent<RectTransform>();
         _cachedAinSensitivity = _aimSensitivity;
+        _graphicRaycaster.enabled = false;
 
         if (EventSystem.current != null)
         {
@@ -218,25 +235,23 @@ public class PanelBase : MonoBehaviour
     // ===== Pointer pipeline =====
     private void PointerDown(PointerEventData.InputButton btn)
     {
-        if (PanelKeyLock)
-            return;
+        if (PanelKeyLock) return;
 
+        // ★ 이미 뭔가 눌려있다면 먼저 ‘정리’하고 새로 시작
         if (_pressedObject != null)
             ForceReleasePointer();
 
         _pressedButton = btn;
 
         var hit = HitTopMost();
-        if (hit == null)
-            return;
+        if (hit == null) return;
 
         _pressedObject =
             FindHandlerTarget<IBeginDragHandler>(hit) ??
             FindHandlerTarget<IDragHandler>(hit) ??
             FindHandlerTarget<IPointerClickHandler>(hit) ??
             FindHandlerTarget<IPointerDownHandler>(hit);
-        if (_pressedObject == null)
-            return;
+        if (_pressedObject == null) return;
 
         _pressRaycast = _lastRaycast;
 
@@ -256,8 +271,7 @@ public class PanelBase : MonoBehaviour
 
     private void PointerDragTick()
     {
-        if (_pressedObject == null)
-            return;
+        if (_pressedObject == null) return;
 
         HitTopMost();
         var ped = BuildPointerData();
@@ -288,6 +302,7 @@ public class PanelBase : MonoBehaviour
 
     private void PointerUp(PointerEventData.InputButton btn)
     {
+        // ★ 다른 버튼의 Up이면 무시 (짝이 안 맞는 업)
         if (_pressedObject == null || btn != _pressedButton)
             return;
 
@@ -487,20 +502,22 @@ public class PanelBase : MonoBehaviour
 
     #endregion
 
-    private void EnterPanelCore()
+    public void EnterPanelCore()
     {
-        ConsoleLogger.Log("패널캠 전환완료");
+        if (!isZoomOperating)
+            return;
 
-        GameState.Instance.PanelMode.Controller = this;
-        GameState.Instance.ChangePlayMode(GameState.Instance.PanelMode);
-        GameState.Instance.CanPause = false;
+        if (_screenShaderImg != null)
+            _screenShaderImg.enabled = true;
 
+        DisableCamAA();
         _InteractCollider.gameObject.SetActive(false);
 
         _cursorImg.gameObject.SetActive(true);
         GameState.Instance.PanelMode.OnEnterPanelRoutineComplete(_endPos);
 
         OperatingPanelEvent?.Invoke();
+        _onOperatingPanel?.Invoke();
 
         _cursorScreenPos = Vector3.zero;
         _cursorRect.localPosition = _cursorScreenPos;
@@ -521,15 +538,16 @@ public class PanelBase : MonoBehaviour
         _panelInput.OnLShiftKeyUp += EndFocusCursor;
 
         isOperatingPanel = true;
-        _isZoomOperating = true;
     }
 
     private void ExitPanelCore()
     {
-        if (_focusFxActive) EndFocusCursor();
+        if (_screenShaderImg != null)
+            _screenShaderImg.enabled = false;
 
-        GameState.Instance.ChangePlayMode(GameState.Instance.NormalMode);
+        if (_focusFxActive) EndFocusCursor();
         _cursorImg.gameObject.SetActive(false);
+        EnableAA();
 
         _panelInput.OnClickLeftDown -= _LeftDownCache;
         _panelInput.OnClickLeftUp -= _LeftUpCache;
@@ -546,23 +564,57 @@ public class PanelBase : MonoBehaviour
         _panelInput.OnLShiftKeyDown -= StartFocusCursor;
         _panelInput.OnLShiftKeyUp -= EndFocusCursor;
 
+        isZoomOperating = false;
         PanelOperationCompleted?.Invoke();
+        _onPanelOperationCompleted?.Invoke();
     }
 
     // ===== Panel control =====
     public void StartPanelControl()
     {
-        if (_panelLock || _isBlending || _isZoomOperating) return;
+        if (_panelLock || _isBlending || isZoomOperating) return;
 
         if (_hoverInput != null)
             EndHoverControl();
 
+        _InteractCollider.gameObject.SetInactive();
+        _cursorImg.gameObject.SetActive();
+
+        _graphicRaycaster.enabled = true;
         _viewCam.Priority = 100;
-        SwitchToVCam(() => { EnterPanelCore(); });
+        isZoomOperating = true;
+
+        GameState.Instance.PanelMode.Controller = this;
+        GameState.Instance.ChangePlayMode(GameState.Instance.PanelMode);
+
+        StartCoroutine(WaitForBlendEnd(EnterPanelCore));
     }
 
-    private void SwitchToVCam(Action onComplete = null)
-        => StartCoroutine(WaitForBlendEnd(onComplete));
+    public void EndPanelControl()
+    {
+        if (!isOperatingPanel || _isBlending || GameState.Instance.IsPlayingDialog)
+            return;
+        
+        GameState.Instance.ChangePlayMode(GameState.Instance.NormalMode);
+        ExitPanelCore();
+
+        _graphicRaycaster.enabled = false;
+        _viewCam.Priority = 0;
+
+        StartCoroutine(WaitForBlendEnd(() =>
+        {
+            GameState.Instance.PanelMode.Controller = null;
+            GameState.Instance.PanelMode.OnExitPanelRoutineComplete();
+
+            if (!_panelLock)
+                _InteractCollider.gameObject.SetActive(true);
+            isOperatingPanel = false;
+
+            //만약 Hover가 가능한 상태면, 재진입
+            if (_canHover && isHovered)
+                StartHoverControl();
+        }));
+    }
 
     private IEnumerator WaitForBlendEnd(Action onComplete)
     {
@@ -572,62 +624,6 @@ public class PanelBase : MonoBehaviour
         yield return new WaitUntil(() => !brain.IsBlending);
         _isBlending = false;
         onComplete?.Invoke();
-    }
-
-    public void EndPanelControl()
-    {
-        if (!isOperatingPanel || _isBlending || PanelKeyLock)
-            return;
-
-        ExitPanelCore();
-
-        _viewCam.Priority = 0;
-
-        StartCoroutine(WaitForBlendEnd(() =>
-        {
-            GameState.Instance.PanelMode.OnExitPanelRoutineComplete();
-            GameState.Instance.CanPause = true;
-            _InteractCollider.gameObject.SetActive(true);
-            isOperatingPanel = false;
-            _isZoomOperating = false;
-
-            //만약 Hover가 가능한 상태면, 재진입
-            if (_canHover && isHovered)
-                StartHoverControl();
-        }));
-    }
-
-    public void EndPanelForcely()
-    {
-        if (!isOperatingPanel || _isBlending || PanelKeyLock)
-            return;
-
-        if (_focusFxActive) EndFocusCursor();
-
-        _viewCam.Priority = 0;
-        _cursorImg.gameObject.SetActive(false);
-
-        _panelInput.OnClickLeftDown -= _LeftDownCache;
-        _panelInput.OnClickLeftUp -= _LeftUpCache;
-
-        _panelInput.OnClickRightDown -= _RightDownCache;
-        _panelInput.OnClickRightUp -= _RightUpCache;
-
-        _panelInput.OnMouseAxis -= SetRayDirection;
-
-        _panelInput.OnESCKeyDown -= EndPanelControl;
-        _panelInput.OnLeftKeyDown -= CashedLeft;
-        _panelInput.OnRightKeyDown -= CashedRight;
-
-        _panelInput.OnLShiftKeyDown -= StartFocusCursor;
-        _panelInput.OnLShiftKeyUp -= EndFocusCursor;
-
-        PanelOperationCompleted?.Invoke();
-
-        GameState.Instance.PanelMode.OnExitPanelRoutineComplete();
-        GameState.Instance.CanPause = true;
-        _InteractCollider.gameObject.SetActive(true);
-        isOperatingPanel = false;
     }
 
     public virtual void ChangeNextPage()
@@ -644,11 +640,34 @@ public class PanelBase : MonoBehaviour
     [EasyButtons.Button]
     public void PanelUnLock() => _panelLock = false;
 
-    public virtual void SetPanelKeyLock() => PanelKeyLock = true;
+    public virtual void SetPanelKeyLock(bool state) => PanelKeyLock = state;
+    public virtual void LockPanelKeyLock() => PanelKeyLock = true;
     public virtual void ReleasePanelKeyLock() => PanelKeyLock = false;
 
     public void RemoveESCKey() => _panelInput.OnESCKeyDown -= EndPanelControl;
     public void AddESCKey() => _panelInput.OnESCKeyDown += EndPanelControl;
+
+    private void DisableCamAA()
+    {
+        if (_cameraData == null)
+        {
+            _cameraData = Camera.main?.GetUniversalAdditionalCameraData();
+        }
+
+        //안티앨리어싱이 켜져있으면, TextMesh가 잔상이 심하기 남아서,
+        //패널 조작중에는 사용하지 않도록 하는게 좋아보임.
+        _cameraData.antialiasing = AntialiasingMode.None;
+    }
+
+    private void EnableAA()
+    {
+        if (_cameraData == null)
+        {
+            _cameraData = Camera.main?.GetUniversalAdditionalCameraData();
+        }
+
+        _cameraData.antialiasing = AntialiasingMode.TemporalAntiAliasing;
+    }
 
     #region HoverControl
 
@@ -657,9 +676,10 @@ public class PanelBase : MonoBehaviour
 
     public void StartHoverControl()
     {
-        if (_isZoomOperating || !_canHover) return;
+        if (isZoomOperating || !_canHover) return;
 
         ScreenDirector.Instance.HideCrosshair();
+        _graphicRaycaster.enabled = true;
 
         _cursorImg.gameObject.SetActive(true);
         _cursorRect.localPosition = _cursorScreenPos;
@@ -684,7 +704,7 @@ public class PanelBase : MonoBehaviour
 
     public void EndHoverControl()
     {
-        if (_isZoomOperating || !_canHover) return;
+        if (isZoomOperating || !_canHover) return;
 
         if (_iaRaycaster != null)
         {
@@ -692,6 +712,7 @@ public class PanelBase : MonoBehaviour
         }
 
         ScreenDirector.Instance?.ShowCrosshair();
+        _graphicRaycaster.enabled = false;
 
         _cursorImg.gameObject.SetActive(false);
 

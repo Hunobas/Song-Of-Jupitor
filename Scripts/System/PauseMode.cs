@@ -19,6 +19,7 @@ public sealed class PauseMode : IPlayMode
         OnEnterEvent?.Invoke();
         _prevMode = prev;
         Time.timeScale = 0f;
+        SoundManager.Instance.PauseAll();
         
         _owner.OptionMenu.OpenPauseMenu();
     }
@@ -27,10 +28,12 @@ public sealed class PauseMode : IPlayMode
     {
         OnExitEvent?.Invoke();
         Time.timeScale = 1f;
+        SoundManager.Instance.ResumeAll();
     }
 
     public void Resume()
     {
+        PopupManager.Instance.AllClose();
         _owner.ChangePlayMode(_prevMode ?? _owner.NormalMode);
     }
 }

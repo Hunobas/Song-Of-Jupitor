@@ -22,11 +22,15 @@ public sealed class PanelMode : IPlayMode
         _owner.StaminaBarUI.CanRun = false;
         _owner.PlayerTabUI?.ClosePlayerReportUI();
         _owner.InputManager.BindToPanel();
+
+        if (prev == _owner.CinemaMode)
+        {
+            Controller.EnterPanelCore();
+        }
     }
 
     public void OnEnterPanelRoutineComplete(Transform endPos)
     {
-        _owner.ScreenDirector.HideCrosshair();
         _owner.PC.SetPlayerPosition(endPos);
         _owner.PC.SetPlayerCameraRotation(endPos.rotation);
         _owner.PC.LockCameraMouseInput();
@@ -37,12 +41,15 @@ public sealed class PanelMode : IPlayMode
         if (Controller == null)
             return;
         
-        Controller = null;
         OnExitEvent?.Invoke();
         _owner.ScreenDirector.FadeInIcons();
         _owner.StaminaBarUI.CanRun = true;
-        _owner.ScreenDirector.ShowCrosshair();
         _owner.InputManager.BindToWorld();
+        
+        if (next == _owner.CinemaMode)
+        {
+            Controller.EnterPanelCore();
+        }
     }
     
     public void OnExitPanelRoutineComplete()

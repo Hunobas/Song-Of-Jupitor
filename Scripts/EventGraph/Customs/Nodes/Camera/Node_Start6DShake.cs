@@ -122,13 +122,23 @@ namespace EventGraph
                 float t = 0f;
                 while (t < _dur && !_cancelRequested)
                 {
-                    // ActionNodeBase에서 unscaled 옵션을 처리하므로 여기서는 Time.deltaTime 사용
-                    t += Time.deltaTime;
-                    float u = Mathf.Clamp01(t / _dur);
-                    if (_perlin != null)
+                    if (!GameState.Instance.IsPaused)
                     {
-                        _perlin.m_AmplitudeGain = Mathf.Lerp(_amp, 0f, u);
-                        _perlin.m_FrequencyGain = Mathf.Lerp(_freq, 0f, u);
+                        t += Time.deltaTime;
+                        float u = Mathf.Clamp01(t / _dur);
+                        if (_perlin != null)
+                        {
+                            _perlin.m_AmplitudeGain = Mathf.Lerp(_amp, 0f, u);
+                            _perlin.m_FrequencyGain = Mathf.Lerp(_freq, 0f, u);
+                        }
+                    }
+                    else
+                    {
+                        if (_perlin != null)
+                        {
+                            _perlin.m_AmplitudeGain = 0f;
+                            _perlin.m_FrequencyGain = 0f;
+                        }
                     }
                     yield return null;
                 }
@@ -146,7 +156,7 @@ namespace EventGraph
 
             public void OnComplete()
             {
-                // 그래프가 '기다림'인 경우에만 코루틴을 중단/정리.
+                // 그래프가 wait 상태에만 코루틴을 중단/정리.
                 // (waitUntilFinished=false면 OnComplete가 즉시 호출되므로 코루틴을 유지해야 함)
                 if (_cancelOnComplete)
                 {

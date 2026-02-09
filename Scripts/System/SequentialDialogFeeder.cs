@@ -32,12 +32,14 @@ public class SequentialDialogFeeder : MonoBehaviour, IDialogFeeder
     private DialogData _curDialogData;
     private ETC_DialogData _curEtcData;
     bool _bundleDirtyByLocale;
+    bool _autoClose = true;
     private bool _usingETC = false; //ETC 번들인지
     [SerializeField] private DialogWriterType _dialogWriterType;
 
     [Header("Monolog Parameters")]
+    [SerializeField] private GameObject _monologueNextButton;
     [SerializeField] private VerticalLayoutGroup _verticalGroup;
-    [SerializeField] private Image _cutsceneImage;
+    [SerializeField] private CutscenePanelBase _cutscenePanel;
     [SerializeField] private TMP_Text _textSection;
     [SerializeField] private ScreenGlitch _screenGlitch;
     [SerializeField] private float _glitchTime = 0.05f;
@@ -197,7 +199,7 @@ public class SequentialDialogFeeder : MonoBehaviour, IDialogFeeder
             return;
         }
 
-        GameState.Instance.ChangePlayMode(GameState.Instance.DialogMode);
+        GameState.Instance.IsPlayingDialog = true;
         _bundleItemIndex++;
 
         if (_dialogEnumerator.Current is DialogData dd)
@@ -226,7 +228,7 @@ public class SequentialDialogFeeder : MonoBehaviour, IDialogFeeder
 
     private void UpdateCutsceneImage(string newPath)
     {
-        if (_dialogWriterType != DialogWriterType.Monolog || !_cutsceneImage)
+        if (_dialogWriterType != DialogWriterType.Monolog || !_cutscenePanel)
             return;
 
         if (newPath == _prevImagePath)
@@ -240,10 +242,11 @@ public class SequentialDialogFeeder : MonoBehaviour, IDialogFeeder
         void SwapImage()
         {
             var sprite = ResourceManager.Instance.Load<Sprite>(newPath);
-            _cutsceneImage.sprite = sprite;
+            _cutscenePanel.ImagePanel.SetSprite(sprite);
+            // _cutscenePanel.ImagePanel.Image.sprite = sprite;
 
             bool hasSprite = sprite != null;
-            _cutsceneImage.gameObject.SetActive(hasSprite);
+            _cutscenePanel.ImagePanel.gameObject.SetActive(hasSprite);
 
             if (_textSection != null)
             {
@@ -397,8 +400,7 @@ public class SequentialDialogFeeder : MonoBehaviour, IDialogFeeder
         //var currentSet = ((DialogObject)_dialogEnumerator.Current);
         //currentSet.onEnd?.Invoke();
         
-        IPlayMode next = GameState.Instance.GetPlayModeBy(_nextPlayMode);
-        GameState.Instance.ChangePlayMode(next ?? GameState.Instance.NormalMode);
+        GameState.Instance.IsPlayingDialog = false;
 
         _runningBlock?.OnDone();
     }
@@ -479,11 +481,13 @@ public class SequentialDialogFeeder : MonoBehaviour, IDialogFeeder
 
     public void IgnoreFeedNextInput()
     {
+        _monologueNextButton?.SetInactive();
         _inputWorld.OnSpaceKeyDown -= FeedNext;
     }
 
     public void ConnectFeedNextInput()
     {
+        _monologueNextButton?.SetActive();
         _inputWorld.OnSpaceKeyDown += FeedNext;
     }
 
@@ -499,6 +503,7 @@ public class SequentialDialogFeeder : MonoBehaviour, IDialogFeeder
     {
         _isFinished = true;
         _isBindData = false;
+        _cutscenePanel.ClearSprite();
         OnDialogEnd();
         CallTalkEndEvent();
         CloseCurDialogPanel();
@@ -520,6 +525,9 @@ public class SequentialDialogFeeder : MonoBehaviour, IDialogFeeder
 
     private void CloseCurDialogPanel()
     {
+        if (!_autoClose)
+            return;
+        
         switch (_dialogWriterType)
         {
             case DialogWriterType.Dialog:
@@ -531,6 +539,8 @@ public class SequentialDialogFeeder : MonoBehaviour, IDialogFeeder
                 break;
         }
     }
+    
+    public void SetAutoClose(bool autoClose) => _autoClose = autoClose;
 
     public void ResetTalkEvents()
     {

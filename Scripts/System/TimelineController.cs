@@ -2,6 +2,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.Playables;
 using UnityEngine.Timeline;
+using Sirenix.OdinInspector;
 
 public class TimelineController : MonoBehaviour
 {
@@ -10,10 +11,9 @@ public class TimelineController : MonoBehaviour
     [SerializeField] private SequentialDialogFeeder _dialogFeeder;
     [SerializeField] private DialogueType _dialogType;
     [SerializeField] private int _etcID;
-    [Tooltip("시네마 모드가 끝나고 돌아갈 모드를 임의로 설정")]
-    [SerializeField] private PlayModeType _nextPlayMode = PlayModeType.None;
-    
-    private const double END_EPS = 1e-3;
+    [SerializeField] private bool _isOneShot;
+    [ShowIf("_isOneShot")]
+    [SerializeField, ReadOnly] private bool _hasPlayed;
 
     public EventBlock TimelinePlay => _timeBlock;
     private EventBlock _timeBlock;
@@ -28,7 +28,6 @@ public class TimelineController : MonoBehaviour
     public void PauseTime(float duration) => StartCoroutine(PauseTimeCoroutine(duration)); 
     public void Stop() => _timeline.Stop();
     public void Resume() => _timeline.Resume();
-    public void SetNextPlayMode(PlayModeType next) => _nextPlayMode = next;
 
     public void BindTimeline(TimelineAsset timelineAsset)
     {
@@ -43,14 +42,19 @@ public class TimelineController : MonoBehaviour
     
     public void Play()
     {
+        if (_isOneShot && _hasPlayed)
+            return;
+        
         _timeBlock.OnStart();
         GameState.Instance.ChangePlayMode(GameState.Instance.CinemaMode);
 
         _timeline.stopped -= OnTimelineStopped;
-        
         _timeline.stopped += OnTimelineStopped;
         
         _timeline.Play();
+        
+        if (_isOneShot)
+            _hasPlayed = true;
     }
 
     public void FeedNext() => _dialogFeeder.FeedNext();
@@ -101,10 +105,12 @@ public class TimelineController : MonoBehaviour
 
     private void OnTimelineStopped(PlayableDirector _)
     {
-        IPlayMode next = GameState.Instance.GetPlayModeBy(_nextPlayMode);
-        GameState.Instance.CinemaMode.ExitCinemaMode(next);
-        _timeBlock.OnDone();
+        if (GameState.Instance != null)
+        {
+            GameState.Instance.CinemaMode.ExitCinemaMode();
+        }
 
+        _timeBlock.OnDone();
         _timeline.stopped -= OnTimelineStopped;
     }
 }
