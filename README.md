@@ -945,8 +945,8 @@ public enum BlurMethod
    - Downsample/Iterations로 품질-성능 트레이드오프
 
 [📂 전체 코드 보기](https://github.com/Hunobas/Song-Of-Jupitor/blob/10a1e7beee04279e75c236bbac08075c8c4097b4/Scripts/Renders/CameraBlur/CameraBlurController.cs#L24)  
-[📂 Shader 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/main/Scripts/Renders/CameraBlur/CameraBlur.shader)  
-[📂 Render Feature](https://github.com/Hunobas/Song-Of-Jupitor/blob/10a1e7beee04279e75c236bbac08075c8c4097b4/Scripts/Renders/CameraBlur/CameraBlurFeature.cs#L6)
+<br /> [📂 Shader 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/main/Scripts/Renders/CameraBlur/CameraBlur.shader)  
+<br /> [📂 Render Feature](https://github.com/Hunobas/Song-Of-Jupitor/blob/10a1e7beee04279e75c236bbac08075c8c4097b4/Scripts/Renders/CameraBlur/CameraBlurFeature.cs#L6)
 
 #### 📊 성과
 
