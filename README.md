@@ -19,6 +19,7 @@
   - [4️⃣ 패널 드래그 앤 드랍 시스템 확장](#4️⃣-패널-드래그-앤-드랍-시스템-확장)
   - [5️⃣ 유니티 이벤트그래프를 언리얼 블루프린트처럼 확장](#5️⃣-유니티-이벤트그래프를-언리얼-블루프린트처럼-확장)
   - [6️⃣ 모션벡터 없는 카메라 모션블러 셰이더 구현](#6️⃣-모션벡터-없는-카메라-모션블러-셰이더-구현)
+  - [7️⃣ 어드벤처 게임을 위한 사운드 아키텍처 설계](#7️⃣-어드벤처-게임을-위한-사운드-아키텍처-설계)
 
 <br />
 
@@ -55,7 +56,8 @@
 #### 🚨 문제 상황
 
 <img width="1370" height="814" alt="image" src="https://github.com/user-attachments/assets/b1cb833c-c6ae-4603-bdc4-5901bd7b340f" />
-<br /> *400만 버텍스 + 300개 머터리얼 → 30~60 FPS로 불안정*
+
+*400만 버텍스 + 300개 머터리얼 → 30~60 FPS로 불안정*
 
 <br /> 목성의 노래의 우주 정거장 씬은 3060ti 환경에서도 에디터 씬 전환에 2초 이상, 인게임 FPS도 들쭉날쭉했습니다.
 
@@ -63,7 +65,8 @@
 - CPU Usage만 한 프레임에 **10ms** 이상
 
 <img width="482" height="360" alt="image" src="https://github.com/user-attachments/assets/6e7cd80a-cb53-408a-adff-cc3937bbbceb" />
-<br /> *최적화 전: 배칭 수 2,600개, CPU 프레임당 10ms 이상*
+
+*최적화 전: 배칭 수 2,600개, CPU 프레임당 10ms 이상*
 
 #### 🎯 핵심 구현 포인트
 
@@ -96,15 +99,18 @@ Backface Threshold: 15
 #### 📊 성과
 
 <img width="1548" height="591" alt="image" src="https://github.com/user-attachments/assets/6b35a453-6a45-4258-9635-3bcff6062e97" />
-<br /> *머터리얼 아틀라스 및 콤바인 메쉬 적용 전후*
+
+*머터리얼 아틀라스 및 콤바인 메쉬 적용 전후*
 <br /> <br /> 
 
 <img width="1914" height="487" alt="image" src="https://github.com/user-attachments/assets/ae54d0cd-f24b-4357-8bf0-73c0634bd549" />
-<br /> *최적화 전: CPU/GPU 총합 1프레임 평균 15ms 소요, 스파이크 다수*
+
+*최적화 전: CPU/GPU 총합 1프레임 평균 15ms 소요, 스파이크 다수*
 <br /> <br /> 
 
 <img width="1887" height="464" alt="image" src="https://github.com/user-attachments/assets/726fb8cd-71cc-4869-b42b-cff7c3be2427" />
-<br /> *최적화 후: CPU/GPU 모두 안정화*
+
+*최적화 후: CPU/GPU 모두 안정화*
 <br /> <br /> 
 
 | 단계 | Batches | CPU | GPU | FPS |
@@ -158,7 +164,8 @@ Verts는 72% 감소했지만 **Draw Call 74% 증가로 전체 성능 하락**.
 - 디버깅 시 어디서 상태가 꼬였는지 추적하는 데에 **평균 1시간 소요**
 
 ![GameState 버그 영상](https://github.com/user-attachments/assets/fa973d2f-df58-483d-ae3b-05d5104e9bc6)
-<br /> *패널 모드 진입 중 시네마 모드가 끼어들면 발생하는 조작 불가 문제*
+
+*패널 모드 진입 중 시네마 모드가 끼어들면 발생하는 조작 불가 문제*
 
 #### 🎯 핵심 구현 포인트
 
@@ -283,7 +290,8 @@ public void OnExit(IPlayMode next)
 - 아트 팀원: "이거 좀 더 밝게 해주세요" → 프로그래머 호출
 
 ![image (2)](https://github.com/user-attachments/assets/389ec02c-9fdf-4cdd-aa57-0c9e79bbfa4b)
-<br /> *목표: Unity 에디터에서 실시간 미리보기 가능한 아스키 렌더러*
+
+*목표: Unity 에디터에서 실시간 미리보기 가능한 아스키 렌더러*
 
 #### 🎯 핵심 구현 포인트
 
@@ -505,7 +513,8 @@ string GetOrMakeColorTag(int key)
 - 드래그 중 캔버스 밖으로 벗어나면 **입력 유실**
 
 ![시그널 퍼즐](https://github.com/user-attachments/assets/a160c3f4-1c15-4820-ba24-a88395dc58cf)
-<br /> *목표: 드래그 & 드랍 기능이 필요한 시그널 퍼즐*
+
+*목표: 드래그 & 드랍 기능이 필요한 시그널 퍼즐*
 
 #### 🎯 핵심 구현 포인트
 
@@ -749,7 +758,8 @@ Unity 기본 `UnityEvent`에서 최대 1개 파라미터만 지원하는 `Invoke
 - **Unreal 블루프린트**처럼 한 노드의 실행이 정확히 끝나는 순간 다음 노드로 실행이 불가능
 
 <img width="781" height="366" alt="image" src="https://github.com/user-attachments/assets/69ea3e47-2097-444d-8cc9-b94cc31b73b1" />
-<br /> *최대 1개 파라미터 메서드만 호출할 수 있는 기존 이벤트그래프 `Invoke` 노드*
+
+*최대 1개 파라미터 메서드만 호출할 수 있는 기존 이벤트그래프 `Invoke` 노드*
 
 #### 🎯 핵심 구현 포인트
 
@@ -903,7 +913,8 @@ Unity URP에서 BaseLayer 카메라가 여러 개 있는 씬에서는 모션 벡
 - 두 번째 카메라는 모션 벡터 없이 렌더링 → **모션 블러 효과 사라짐**
 
 <img width="1839" height="916" alt="image" src="https://github.com/user-attachments/assets/52ed330a-0238-4c12-be0d-0bc4d6086860" />
-<br /> *Main Camera와 Player Camera가 모두 Base Layer → Motion Blur Volume 무시됨*
+
+*Main Camera와 Player Camera가 모두 Base Layer → Motion Blur Volume 무시됨*
 
 #### 🎯 핵심 구현 포인트
 
@@ -940,7 +951,8 @@ public enum BlurMethod
 #### 📊 성과
 
 ![Jupitor-Prologue-WindowsMacLinux-Unity2022 3 62f2_DX11_2025-12-1307-55-40-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/359d2e29-2e54-4c56-a11b-4fa64f54b5e4)
-<br /> *Timeline에서 편집 가능한 정적 모션 블러*
+
+*Timeline에서 편집 가능한 정적 모션 블러*
 
 1. 모션 벡터 텍스처 의존성 제거된 연출
 2. **각도/중심점 자유롭게 설정** 가능한 블러 방향
@@ -1109,6 +1121,219 @@ public override void Execute(ScriptableRenderContext ctx, ref RenderingData rd)
 ```
 
 [세부 코드 보기 - CameraBlurPass](https://github.com/Hunobas/Song-Of-Jupitor/blob/10a1e7beee04279e75c236bbac08075c8c4097b4/Scripts/Renders/CameraBlur/CameraBlurPass.cs#L77)
+
+</details>
+
+---
+
+### [7️⃣ 어드벤처 게임을 위한 사운드 아키텍처 설계](#-목차)
+
+#### 🚨 문제 상황
+
+**Unity AudioSource만으로는 복잡한 사운드 연출이 어려움**
+
+어드벤처 게임에서는 여러 사운드가 동시에 재생되며 서로 영향을 주고받아야 합니다. 하지만 Unity의 기본 AudioSource는 이를 수월하게 처리하기 어려웠습니다.
+
+- 페이드인/페이드아웃 직접 구현 필요
+- 크로스페이드, 루프 시 자연스러운 전환 불가
+- 중요한 사운드 재생 시 다른 사운드 볼륨 낮추기(Duck) 미지원
+- 사운드 재생 완료 시점 콜백 처리 번거로움
+- 기획자가 Inspector에서 설정하기 불편
+
+![preview](https://github.com/user-attachments/assets/43a81247-8927-4e6c-a465-2a5db6d5be0f)
+
+*영상 편집 프로그램의 오디오 트랙/클립 구조에서 영감을 얻음*
+
+#### 🎯 핵심 설계 아이디어
+
+**영상 편집 프로그램의 트랙/클립 개념을 게임 사운드 시스템에 적용**
+
+| 구분 | SoundSource | SoundEntry |
+|------|-------------|------------|
+| **영상편집 대응 개념** | 오디오 트랙 | 개별 클립 |
+| **대상 사용자** | 기획자 (Inspector 설정) | 프로그래머 (코드 제어) |
+| **설계 방향** | SerializedField로 툴 친화적 | FluentAPI로 체이닝 |
+
+1. **SoundSource: 오디오 트랙 역할**
+```csharp
+[RequireComponent(typeof(AudioSource))]
+public class SoundSource : MonoBehaviour
+{
+    [Title("Default Settings")]
+    [SerializeField]
+    private SoundPriority _priority = SoundPriority.Normal;
+
+    [SerializeField]
+    private PlayOptions _options = PlayOptions.None;
+
+    [SerializeField]
+    private OverlapPolicy _overlapPolicy = OverlapPolicy.Override;
+
+    [SerializeField, Min(0f)]
+    private float _defaultFadeInDuration = 0.2f;
+
+    // 기획자가 Inspector에서 기본값 설정 가능
+}
+```
+
+2. **SoundEntry: 개별 클립 엔티티 + FluentAPI**
+```csharp
+// 프로그래머가 코드로 세밀하게 제어
+_soundSource.PlayByNameOrNull("GeneratorStartUp")
+    .WithFadeIn(0.5f)
+    .WithFadeOut(1.0f)
+    .WithPriority(SoundPriority.High)
+    .WithOptions(PlayOptions.DuckOthers)
+    .OnFinish(() => _soundSource.PlayByNameOrNull("GeneratorLoop").WithLoop().WithOptions(PlayOptions.DuckOthers));
+```
+
+3. **OverlapPolicy: 사운드 중첩 처리 전략**
+```csharp
+public enum OverlapPolicy
+{
+    Override,    // 기존 사운드 중단 후 새 사운드 재생
+    Ignore,      // 새 사운드 무시, 기존 사운드 유지
+    Crossfade,   // 기존 사운드 페이드아웃 + 새 사운드 페이드인
+    OneShot      // 기존 사운드와 독립적으로 동시 재생, 새로 재생되는 사운드는 컨트롤 불가 영역 (댕글링 객체)
+}
+```
+
+[📂 SoundManager 전체 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/main/Scripts/Sound/SoundManager.cs)
+[📂 SoundSource 전체 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/main/Scripts/Sound/SoundSource.cs)
+[📂 SoundEntry 전체 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/main/Scripts/Sound/SoundEntry.cs)
+
+#### 📊 성과
+
+| 사용자 | Before | After |
+|--------|--------|-------|
+| **기획자** | 코드 수정 요청 필요 | Inspector에서 직접 설정 |
+| **프로그래머** | 매번 코루틴/DOTween 작성 | 한 줄 체이닝으로 완료 |
+
+- 페이드/크로스페이드/루프 전환이 **1줄 코드**로 가능
+- 기획자가 **Inspector에서 기본 설정** 후 프로그래머가 **코드로 오버라이드** 가능
+- Duck 시스템으로 **중요 사운드 강조** 자동화
+
+<br />
+
+<details>
+<summary><b>🔧 구현 과정 1: 자동 루프 크로스페이드</b></summary>
+
+<br /> 루프 재생 시 끊김 없이 자연스럽게 이어지도록 **자동 크로스페이드** 구현
+```csharp
+internal void ScheduleEnd(float fadeOutDuration, Action onComplete, GameObject linkTarget = null)
+{
+    // 루프가 남아있을 때 자동 크로스페이드
+    if (LoopCount == -1 || LoopCount > 1)
+    {
+        float delay = Mathf.Max(0.01f, ClipLength - _source.LoopCrossfadeDuration);
+        _scheduler = DOVirtual.DelayedCall(delay, () =>
+        {
+            if (IsFinished || LoopCount == 0)
+                return;
+            
+            // 다음 루프를 새 SoundEntry로 생성하여 크로스페이드
+            SoundEntry nextEntry = new SoundEntry(this);
+            nextEntry.LoopCount = LoopCount > 0 ? LoopCount - 1 : LoopCount;
+            _source.CrossfadeTo(nextEntry, _source.LoopCrossfadeDuration);
+            
+        }, false).SetLink(_source.gameObject);
+    }
+    // ...
+}
+```
+
+- 클립 종료 직전(페이드아웃 시작 시점)에 다음 루프를 **새 SoundEntry로 생성**
+- 기존 사운드는 **오브젝트 풀에서 가져온 AudioSource로 이관** 후 댕글링 객체인 상태로 페이드아웃
+- 새 사운드는 Primary AudioSource에서 페이드인
+
+</details>
+
+<details>
+<summary><b>🔧 구현 과정 2: Duck 시스템으로 중요 사운드 강조</b></summary>
+
+<br /> 중요한 사운드 재생 시 다른 사운드의 볼륨을 자동으로 낮춤
+```csharp
+// SoundManager.cs
+internal void DuckAllExcept(SoundEntry exceptEntry)
+{
+    foreach (var source in _registeredSources)
+    {
+        if (source.CurrentEntry == exceptEntry)
+            continue;
+
+        if (!source.IsPlaying)
+            continue;
+
+        // 우선순위가 같거나 높은 사운드는 Duck하지 않음
+        if (source.CurrentEntry != null && 
+            source.CurrentEntry.Priority >= exceptEntry.Priority)
+            continue;
+
+        source.Duck(_duckVolume, _duckFadeDuration);
+        _duckedSources.Add(source);
+    }
+}
+
+internal void RestoreDucked()
+{
+    foreach (var source in _duckedSources)
+    {
+        source.Unduck(_duckFadeDuration);
+    }
+    _duckedSources.Clear();
+}
+```
+
+**사용 예시:**
+```csharp
+// 중요 대사 재생 시 배경음 자동으로 볼륨 다운
+_voiceSource.Play(dialogueClip)
+    .WithOptions(PlayOptions.DuckOthers)
+    .WithPriority(SoundPriority.High);
+```
+
+</details>
+
+<details>
+<summary><b>🔧 구현 과정 3: 크로스페이드 시 AudioSource 풀링</b></summary>
+
+<br /> 크로스페이드 시 페이드아웃되는 사운드는 **오브젝트 풀에서 가져온 AudioSource**로 이관하여 댕글링 처리
+```csharp
+internal void CrossfadeTo(SoundEntry next, float duration)
+{
+    // 풀에서 AudioSource 가져오기
+    AudioSource pooled = ObjectPoolManager.Instance
+        .SpawnObj(PoolTag, go => go.SetActive())?
+        .GetComponent<AudioSource>();
+    
+    if (!pooled) return;
+
+    // 현재 재생 중인 사운드를 풀링된 AudioSource로 이관
+    pooled.transform.position = transform.position;
+    CopyAudioSourceComponent(_primaryAudioSource, pooled);
+    
+    SoundEntry prev = CurrentEntry;
+    prev.TransferTo(pooled);  // ★ 기존 엔트리를 풀링된 소스로 이관
+    pooled.Play();
+
+    // 이관된 사운드는 duration 후 자동 반환
+    prev.ScheduleEnd(duration, () =>
+    {
+        prev.ForceFinish();
+        ObjectPoolManager.Instance.ReturnSpawnObj(PoolTag, pooled.gameObject);
+    }, pooled.gameObject);
+
+    // Primary AudioSource에서 새 사운드 재생
+    next.WithFadeIn(duration);
+    ResetPrimary();
+    CurrentEntry = next;
+    next.Play(_primaryAudioSource);
+}
+```
+
+- Primary AudioSource는 항상 **현재 재생 중인 사운드** 담당
+- 페이드아웃 사운드는 **풀링된 AudioSource**로 이관 → 자동 반환
+- 메모리 누수 없이 무한 크로스페이드 가능
 
 </details>
 
