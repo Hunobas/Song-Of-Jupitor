@@ -1199,8 +1199,8 @@ public enum OverlapPolicy
 ```
 
 [📂 SoundManager 전체 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/main/Scripts/Sound/SoundManager.cs)
-[📂 SoundSource 전체 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/main/Scripts/Sound/SoundSource.cs)
-[📂 SoundEntry 전체 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/main/Scripts/Sound/SoundEntry.cs)
+<br /> [📂 SoundSource 전체 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/main/Scripts/Sound/SoundSource.cs)
+<br /> [📂 SoundEntry 전체 코드](https://github.com/Hunobas/Song-Of-Jupitor/blob/main/Scripts/Sound/SoundEntry.cs)
 
 #### 📊 성과
 
