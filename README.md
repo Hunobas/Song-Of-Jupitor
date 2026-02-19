@@ -2,7 +2,7 @@
 
 내러티브 1인칭 3D 퍼즐 게임
 - ▶️ [**Play Demo**](https://www.youtube.com/watch?v=UEz0kvJCfAg)
-- 📘 [**전체 포트폴리오**](https://github.com/Hunobas/Portfolio)
+- 📘 [**전체 포트폴리오**](https://github.com/Hunobas/Portfolio_archive)
 
 <br />
 
